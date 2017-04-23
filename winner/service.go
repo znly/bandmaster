@@ -40,28 +40,16 @@ func New(lifetime time.Duration) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Run(
-	bootCtx, lifeCtx context.Context,
-) (<-chan error, <-chan error) {
-	bootErrC := make(chan error, 1)
-	lifeErrC := make(chan error, 1)
+func (s *Service) Start(ctx context.Context) error {
+	select { // simulate boot latency
+	case <-time.After(time.Second * time.Duration(1+rand.Intn(2))):
+	case <-ctx.Done():
+		return errors.WithStack(ctx.Err())
+	}
 
 	go func() {
-		defer close(lifeErrC) // stopped
-
-		select { // simulate boot latency
-		case <-time.After(time.Second * time.Duration(1+rand.Intn(2))):
-		case <-bootCtx.Done():
-			bootErrC <- errors.WithStack(bootCtx.Err())
-			return
-		}
-		close(bootErrC) // started
-
-		select {
-		case <-time.After(s.lifetime):
-		case <-lifeCtx.Done():
-		}
+		<-time.After(s.lifetime) // stay alive for `lifetime`
 	}()
 
-	return bootErrC, lifeErrC
+	return nil
 }
