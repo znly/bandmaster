@@ -17,7 +17,6 @@ package bandmaster
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sync"
 )
 
@@ -25,42 +24,40 @@ import (
 
 // TODO(cmc)
 type Service interface {
-	Run(bootCtx, lifeCtx context.Context) (<-chan error, <-chan error)
+	Start(ctx context.Context) error
 
 	Name() string
-	Started() <-chan struct{}
-	Stopped() <-chan struct{}
-}
+	Required() bool
 
-// -----------------------------------------------------------------------------
-
-// TODO(cmc)
-type ServiceDependency struct {
-	name          string
-	dontWaitForMe bool
-}
-
-// TODO(cmc)
-func NewServiceDependency(name string, dontWaitForMe bool) ServiceDependency {
-	return ServiceDependency{name: name, dontWaitForMe: dontWaitForMe}
+	Started() <-chan error
+	Stopped() <-chan error
 }
 
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
 type ServiceBase struct {
-	lock       *sync.RWMutex
-	name       string
-	directDeps map[string]ServiceDependency
+	lock *sync.RWMutex
 
-	started chan struct{}
-	stopped chan struct{}
+	name       string
+	required   bool
+	directDeps map[string]struct{}
+
+	started chan error
+	stopped chan error
 }
 
 // TODO(cmc)
 func NewServiceBase() *ServiceBase {
-	return &ServiceBase{lock: &sync.RWMutex{}}
+	return &ServiceBase{
+		lock:       &sync.RWMutex{},
+		directDeps: map[string]struct{}{},
+		started:    make(chan error, 1),
+		stopped:    make(chan error, 1),
+	}
 }
+
+// -----------------------------------------------------------------------------
 
 // TODO(cmc)
 func (sb *ServiceBase) setName(name string) {
@@ -75,42 +72,52 @@ func (sb *ServiceBase) Name() string {
 }
 
 // TODO(cmc)
-func (sb *ServiceBase) addDependency(deps ...ServiceDependency) {
+func (sb *ServiceBase) setRequired(required bool) {
+	sb.lock.Lock()
+	sb.required = required
+	sb.lock.Unlock()
+}
+func (sb *ServiceBase) Required() bool {
+	sb.lock.RLock()
+	defer sb.lock.RUnlock()
+	return sb.required
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
+func (sb *ServiceBase) addDependency(deps ...string) {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
 
-	for _, dd := range sb.directDeps {
-		if dd.name == sb.name {
+	for _, dep := range deps {
+		if dep == sb.name {
 			panic(fmt.Sprintf("`%s`: service depends on itself", sb.name))
 		}
-		if _, ok := sb.directDeps[dd.name]; ok {
+		if _, ok := sb.directDeps[dep]; ok {
 			panic(fmt.Sprintf(
-				"`%s`: service already depends on `%s`", sb.name, dd.name,
+				"`%s`: service already depends on `%s`", sb.name, dep,
 			))
 		}
-		sb.directDeps[dd.name] = dd
+		sb.directDeps[dep] = struct{}{}
 	}
 }
-func (sb *ServiceBase) Dependencies() map[string]ServiceDependency {
+
+// TODO(cmc)
+func (sb *ServiceBase) Dependencies() map[string]struct{} {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
 
-	deps := make(map[string]ServiceDependency, len(sb.directDeps))
-	for name, dd := range sb.directDeps {
-		deps[name] = dd
+	deps := make(map[string]struct{}, len(sb.directDeps))
+	for dep := range sb.directDeps {
+		deps[dep] = struct{}{}
 	}
 
 	return deps
 }
 
-// TODO(cmc)
-func (sb *ServiceBase) Started() <-chan struct{} { return sb.started }
-func (sb *ServiceBase) Stopped() <-chan struct{} { return sb.stopped }
-
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func serviceBase(s Service) *ServiceBase {
-	base := reflect.ValueOf(s).Elem().FieldByName("ServiceBase").Interface()
-	return base.(*ServiceBase)
-}
+func (sb *ServiceBase) Started() <-chan error { return sb.started }
+func (sb *ServiceBase) Stopped() <-chan error { return sb.stopped }
