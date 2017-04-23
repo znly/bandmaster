@@ -1,4 +1,2 @@
-circular deps
 Service.Stop() (service only)
 Maestro.Stop(service) (service + associated deps)
-enforce ServiceBase somehow
