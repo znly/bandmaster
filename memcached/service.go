@@ -47,35 +47,23 @@ func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Run(
-	_, lifeCtx context.Context,
-) (<-chan error, <-chan error) {
-	bootErrC := make(chan error, 1)
-	lifeErrC := make(chan error, 1)
+func (s *Service) Start(ctx context.Context) error {
+	c, err := memcache.New(s.addrs...)
+	if err != nil {
+		return errors.Wrap(err, "couldn't start memcached client")
+	}
+	c.SetTimeout(s.timeout)
 
-	go func() {
-		defer close(lifeErrC) // stopped
+	if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
+		_ = c.Close()
+		return errors.Wrap(err, "couldn't start memcached client")
+	}
 
-		c, err := memcache.New(s.addrs...)
-		if err != nil {
-			bootErrC <- errors.Wrap(err, "couldn't start memcached client")
-			return
-		}
-		c.SetTimeout(s.timeout)
-		s.c = c
-
-		if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
-			bootErrC <- errors.Wrap(err, "couldn't start memcached client")
-			return
-		}
-		close(bootErrC) // started
-
-		select {
-		case <-lifeCtx.Done():
-			lifeErrC <- errors.WithStack(lifeCtx.Err())
-			return
-		}
-	}()
-
-	return bootErrC, lifeErrC
+	s.c = c
+	return nil
 }
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
+func Client(s Service) *memcache.Client { return s.c }
