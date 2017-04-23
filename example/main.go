@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/memcached"
@@ -9,12 +12,19 @@ import (
 )
 
 func main() {
-	m := bandmaster.NewMaestro()
-	m.AddService("mc-1", memcached.New(time.Second, "localhost:11211"))
-	m.AddService("mc-2", memcached.New(time.Second, "localhost:11211"))
-	m.AddService("mc-3", memcached.New(time.Second, "localhost:11211"))
-	m.AddService("wn-1", winner.New(time.Second*10),
-		bandmaster.NewServiceDependency("mc-1", true),
-		bandmaster.NewServiceDependency("mc-3", false),
-	)
+	l, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(l)
+
+	m := bandmaster.GlobalMaestro
+
+	m.AddService("wn-1", false, winner.New(time.Second*10), "mc-1", "mc-3")
+	m.AddService("mc-1", true, memcached.New(time.Second, "localhost:11212"))
+	m.AddService("mc-2", false, memcached.New(time.Second, "localhost:11211"), "mc-1")
+	m.AddService("mc-3", true, memcached.New(time.Second, "localhost:11211"), "mc-2")
+
+	ctx, canceller := context.WithTimeout(context.Background(), time.Second*5)
+	for err := range m.StartAll(ctx) {
+		zap.L().Info(err.Error())
+	}
+	canceller()
 }
