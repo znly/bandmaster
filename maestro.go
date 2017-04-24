@@ -52,12 +52,13 @@ func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
 		panic(fmt.Sprintf("`%s`: service already exists", name))
 	}
 
-	base := serviceBase(s) // will panic if `s` doesn't inherit properly
-	if base == nil {
+	base := serviceBase(s)
+	if base == nil { // panic if `s` doesn't inherit properly
 		panic(fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", name))
 	}
 
 	base.setName(name)
+	base.setRequired(req)
 	base.addDependency(deps...)
 
 	m.services[name] = s
@@ -71,14 +72,12 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	errC := make(chan error, len(m.services)+1)
 	defer close(errC)
 
-	zap.L().Debug("looking for non-existent dependencies...")
-	if m.hasNonexistentDeps() {
-		errC <- errors.New("non-existent dependencies") // TODO(cmc): real error
+	zap.L().Debug("looking for missing dependencies...")
+	if m.hasMissingDeps(errC) {
 		return errC
 	}
 	zap.L().Debug("looking for circular dependencies...")
-	if m.hasCircularDeps() {
-		errC <- errors.New("circular dependencies") // TODO(cmc): real error
+	if m.hasCircularDeps(errC) {
 		return errC
 	}
 
@@ -101,41 +100,49 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 // TODO(cmc)
 // EXPECTS LOCK
 func (m *Maestro) start(ctx context.Context, s Service) error {
-	zap.L().Info("starting service...", zap.String("service", s.Name()))
+	name := s.Name()
+	zap.L().Info("starting service...", zap.String("service", name))
 
 	base := serviceBase(s)
 	defer close(base.started)
 
 	for dep := range base.Dependencies() {
-		zap.L().Debug("waiting for dependency",
-			zap.String("service", s.Name()), zap.String("dependency", dep),
+		zap.L().Debug("waiting for dependency to start",
+			zap.String("service", name), zap.String("dependency", dep),
 		)
 		err := <-m.services[dep].Started()
-		err = errors.Wrapf(err, // TODO(cmc): real error
-			"`%s`: service couldn't start because dependency `%s` failed to start",
-			s.Name(), dep,
-		)
 		if err != nil {
-			zap.L().Debug("dependency unavailable",
-				zap.String("service", s.Name()), zap.String("dependency", dep),
+			zap.L().Debug("dependency failed to start",
+				zap.String("service", name), zap.String("dependency", dep),
 			)
+			err = errors.WithStack(&Error{
+				service:    s,
+				dependency: dep,
+				kind:       ErrDependencyUnavailable,
+			})
 			base.started <- err
 			return err
 		}
 		zap.L().Debug("dependency ready",
-			zap.String("service", s.Name()), zap.String("dependency", dep),
+			zap.String("service", name), zap.String("dependency", dep),
 		)
 	}
 
 	err := s.Start(ctx)
-	err = errors.Wrapf(err, "`%s`: service failed to start", s.Name())
 	if err != nil {
-		zap.L().Info("service failed to start", zap.String("service", s.Name()))
+		zap.L().Info("service failed to start",
+			zap.String("service", name), zap.Error(err),
+		)
+		err = &Error{
+			kind:       ErrServiceStartFailure,
+			service:    s,
+			serviceErr: err,
+		}
 		base.started <- err
 		return err
 	}
 
-	zap.L().Info("service started", zap.String("service", s.Name()))
+	zap.L().Info("service successfully started", zap.String("service", s.Name()))
 
 	return nil
 }
@@ -144,32 +151,42 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 
 // TODO(cmc)
 // EXPECTS LOCK
-func (m *Maestro) hasNonexistentDeps() bool {
+func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 	for _, s := range m.services {
 		base := serviceBase(s)
 		for dep := range base.Dependencies() {
 			if _, ok := m.services[dep]; !ok {
-				return true
+				errC <- errors.WithStack(&Error{
+					service:    s,
+					dependency: dep,
+					kind:       ErrDependencyMissing,
+				})
+				failure = true
 			}
 		}
 	}
-	return false
+	return failure
 }
 
 // TODO(cmc)
 // EXPECTS LOCK
-func (m *Maestro) hasCircularDeps() bool {
+func (m *Maestro) hasCircularDeps(errC chan error) bool {
 	var hasCircularDepsRec func(
 		cur, parent Service, met map[string]struct{}, lvl uint,
 	) bool
 	hasCircularDepsRec = func(
 		cur, parent Service, met map[string]struct{}, lvl uint,
 	) bool {
-		zap.L().Debug("checking circular dependency",
+		zap.L().Debug("checking circular dependencies",
 			zap.Uint("level", lvl),
 			zap.String("parent", parent.Name()), zap.String("current", cur.Name()),
 		)
 		if _, ok := met[cur.Name()]; ok {
+			errC <- errors.WithStack(&Error{
+				service:    parent,
+				dependency: cur.Name(),
+				kind:       ErrDependencyCircular,
+			})
 			return true
 		}
 		metRec := make(map[string]struct{}, len(met))

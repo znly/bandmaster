@@ -18,7 +18,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/rainycape/memcache"
 	"github.com/znly/bandmaster"
 )
@@ -50,13 +49,13 @@ func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 func (s *Service) Start(ctx context.Context) error {
 	c, err := memcache.New(s.addrs...)
 	if err != nil {
-		return errors.Wrap(err, "couldn't start memcached client")
+		return err
 	}
 	c.SetTimeout(s.timeout)
 
 	if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
 		_ = c.Close()
-		return errors.Wrap(err, "couldn't start memcached client")
+		return err
 	}
 
 	s.c = c

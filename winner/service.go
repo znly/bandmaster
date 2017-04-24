@@ -19,7 +19,6 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
 )
 
@@ -44,7 +43,7 @@ func (s *Service) Start(ctx context.Context) error {
 	select { // simulate boot latency
 	case <-time.After(time.Second * time.Duration(1+rand.Intn(2))):
 	case <-ctx.Done():
-		return errors.WithStack(ctx.Err())
+		return ctx.Err()
 	}
 
 	go func() {
