@@ -141,7 +141,7 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	err := s.Start(ctx)
 	if err != nil {
 		zap.L().Info("service failed to start",
-			zap.String("service", name), zap.Error(err),
+			zap.String("service", name), zap.String("err", err.Error()),
 		)
 		err = &Error{
 			kind:       ErrServiceStartFailure,

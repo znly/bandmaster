@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package winner
+package redis
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
+	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
 )
 
@@ -28,30 +29,62 @@ import (
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
-	lifetime time.Duration
+	pool *redis.Pool
 }
 
 // TODO(cmc)
-func DefaultConfig() time.Duration { return time.Second * 10 }
+func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     int(32),
+		MaxActive:   int(32),
+		IdleTimeout: 0,
+		Wait:        true,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.DialURL(uri, opts...)
+			return c, errors.WithStack(err)
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error { return c.Err() },
+	}
+}
 
 // TODO(cmc)
-func New(lifetime time.Duration) bandmaster.Service {
-	return &Service{ServiceBase: bandmaster.NewServiceBase(), lifetime: lifetime}
+func New(p *redis.Pool) bandmaster.Service {
+	return &Service{
+		ServiceBase: bandmaster.NewServiceBase(),
+		pool:        p,
+	}
 }
 
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
 func (s *Service) Start(ctx context.Context) error {
-	select { // simulate boot latency
-	case <-time.After(time.Second * time.Duration(1+rand.Intn(2))):
+	errC := make(chan error, 0)
+	go func() {
+		defer close(errC)
+		c, err := s.pool.Dial()
+		if err != nil {
+			errC <- err
+			return
+		}
+		if _, err = c.Do("PING"); err != nil {
+			errC <- err
+			return
+		}
+	}()
+	select {
 	case <-ctx.Done():
 		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
 	}
-
-	go func() {
-		<-time.After(s.lifetime) // stay alive for `lifetime`
-	}()
 
 	return nil
 }
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
+func Client(s Service) *redis.Pool { return s.pool }
