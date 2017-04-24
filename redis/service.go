@@ -58,7 +58,9 @@ func New(p *redis.Pool) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(
+	ctx context.Context, _ map[string]bandmaster.Service,
+) error {
 	errC := make(chan error, 0)
 	go func() {
 		defer close(errC)

@@ -16,6 +16,7 @@ package cql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -55,7 +56,9 @@ func New(cc *gocql.ClusterConfig) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(
+	ctx context.Context, deps map[string]bandmaster.Service,
+) error {
 	session, err := s.cc.CreateSession()
 	if err != nil {
 		return err
@@ -82,6 +85,11 @@ func (s *Service) Start(ctx context.Context) error {
 
 	s.s = session
 	return nil
+}
+
+// TODO(cmc)
+func (s *Service) String() string {
+	return s.ServiceBase.String() + fmt.Sprintf(" @ %v", s.cc.Hosts)
 }
 
 // -----------------------------------------------------------------------------

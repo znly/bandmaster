@@ -116,11 +116,13 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	base := serviceBase(s)
 	defer close(base.started)
 
+	deps := make(map[string]Service, len(base.Dependencies()))
 	for dep := range base.Dependencies() {
 		zap.L().Debug("waiting for dependency to start",
 			zap.String("service", name), zap.String("dependency", dep),
 		)
-		err := <-m.services[dep].Started()
+		d := m.services[dep]
+		err := <-d.Started()
 		if err != nil {
 			zap.L().Debug("dependency failed to start",
 				zap.String("service", name), zap.String("dependency", dep),
@@ -133,12 +135,13 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 			base.started <- err
 			return err
 		}
+		deps[dep] = d
 		zap.L().Debug("dependency ready",
 			zap.String("service", name), zap.String("dependency", dep),
 		)
 	}
 
-	err := s.Start(ctx)
+	err := s.Start(ctx, deps)
 	if err != nil {
 		zap.L().Info("service failed to start",
 			zap.String("service", name), zap.String("err", err.Error()),
@@ -152,7 +155,7 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 		return err
 	}
 
-	zap.L().Info("service successfully started", zap.String("service", s.Name()))
+	zap.L().Info("service successfully started", zap.String("service", s.String()))
 
 	return nil
 }

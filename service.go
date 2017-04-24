@@ -24,10 +24,12 @@ import (
 
 // TODO(cmc)
 type Service interface {
-	Start(ctx context.Context) error
+	Start(ctx context.Context, deps map[string]Service) error
 
 	Name() string
 	Required() bool
+
+	String() string
 
 	Started() <-chan error
 }
@@ -125,4 +127,14 @@ func (sb *ServiceBase) Started() <-chan error {
 		close(errC)
 	}()
 	return sb.started
+}
+
+// TODO(cmc)
+func (sb *ServiceBase) String() string {
+	name := sb.Name()
+	req := "optional"
+	if sb.Required() {
+		req = "required"
+	}
+	return fmt.Sprintf("'%s' [%s]", name, req)
 }

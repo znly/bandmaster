@@ -1,6 +1,8 @@
 Service.Stop() (service only)
 Maestro.Stop(service) (service + associated deps)
 
+improve circular error
+
 test circular deps
 test missing deps
 test each service implem

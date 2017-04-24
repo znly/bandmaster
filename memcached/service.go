@@ -16,6 +16,7 @@ package memcached
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/rainycape/memcache"
@@ -51,7 +52,9 @@ func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(
+	ctx context.Context, deps map[string]bandmaster.Service,
+) error {
 	c, err := memcache.New(s.addrs...)
 	if err != nil {
 		return err
@@ -77,6 +80,11 @@ func (s *Service) Start(ctx context.Context) error {
 
 	s.c = c
 	return nil
+}
+
+// TODO(cmc)
+func (s *Service) String() string {
+	return s.ServiceBase.String() + fmt.Sprintf(" @ %v", s.addrs)
 }
 
 // -----------------------------------------------------------------------------

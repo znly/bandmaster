@@ -16,6 +16,7 @@ package waiter
 
 import (
 	"context"
+	"log"
 	"math/rand"
 	"time"
 
@@ -42,7 +43,9 @@ func New(lifetime time.Duration) bandmaster.Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (s *Service) Start(ctx context.Context) error {
+func (s *Service) Start(
+	ctx context.Context, deps map[string]bandmaster.Service,
+) error {
 	select { // simulate boot latency
 	case <-time.After(time.Second * time.Duration(1+rand.Intn(2))):
 	case <-ctx.Done():
@@ -50,6 +53,9 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 
 	go func() {
+		for _, dep := range deps {
+			log.Printf("hello there, %s!", dep)
+		}
 		<-time.After(s.lifetime) // stay alive for `lifetime`
 	}()
 
