@@ -1,2 +1,7 @@
 Service.Stop() (service only)
 Maestro.Stop(service) (service + associated deps)
+
+test circular deps
+test missing deps
+test each service implem
+test servicebase inheritance

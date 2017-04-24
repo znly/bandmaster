@@ -42,6 +42,8 @@ type Error struct {
 	dependency string
 }
 
+func (e *Error) Service() Service { return e.service }
+
 func (e *Error) Error() string {
 	switch e.kind {
 	/* common */

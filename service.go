@@ -30,7 +30,6 @@ type Service interface {
 	Required() bool
 
 	Started() <-chan error
-	Stopped() <-chan error
 }
 
 // -----------------------------------------------------------------------------
@@ -44,7 +43,6 @@ type ServiceBase struct {
 	directDeps map[string]struct{}
 
 	started chan error
-	stopped chan error
 }
 
 // TODO(cmc)
@@ -53,7 +51,6 @@ func NewServiceBase() *ServiceBase {
 		lock:       &sync.RWMutex{},
 		directDeps: map[string]struct{}{},
 		started:    make(chan error, 1),
-		stopped:    make(chan error, 1),
 	}
 }
 
@@ -129,4 +126,3 @@ func (sb *ServiceBase) Started() <-chan error {
 	}()
 	return sb.started
 }
-func (sb *ServiceBase) Stopped() <-chan error { return sb.stopped }

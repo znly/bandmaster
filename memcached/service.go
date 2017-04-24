@@ -35,6 +35,11 @@ type Service struct {
 }
 
 // TODO(cmc)
+func DefaultConfig() (time.Duration, string) {
+	return time.Second, "localhost:11211"
+}
+
+// TODO(cmc)
 func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(),
@@ -53,9 +58,21 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 	c.SetTimeout(s.timeout)
 
-	if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
-		_ = c.Close()
-		return err
+	errC := make(chan error, 0)
+	go func() {
+		if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
+			_ = c.Close()
+			errC <- err
+		}
+		close(errC)
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
 	}
 
 	s.c = c

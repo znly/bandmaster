@@ -65,6 +65,16 @@ func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
 }
 
 // TODO(cmc)
+func (m *Maestro) Service(name string) Service {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	return m.services[name]
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
 func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()

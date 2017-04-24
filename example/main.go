@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/memcached"
 	"github.com/znly/bandmaster/winner"
@@ -24,7 +25,15 @@ func main() {
 
 	ctx, canceller := context.WithTimeout(context.Background(), time.Second*5)
 	for err := range m.StartAll(ctx) {
-		zap.L().Info(err.Error())
+		err = errors.Cause(err)
+		switch e := err.(type) {
+		case *bandmaster.Error:
+			if e.Service().Required() {
+				zap.L().Error(e.Error())
+			} else {
+				zap.L().Info(e.Error())
+			}
+		}
 	}
 	canceller()
 }

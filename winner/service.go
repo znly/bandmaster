@@ -32,6 +32,9 @@ type Service struct {
 }
 
 // TODO(cmc)
+func DefaultConfig() time.Duration { return time.Second * 10 }
+
+// TODO(cmc)
 func New(lifetime time.Duration) bandmaster.Service {
 	return &Service{ServiceBase: bandmaster.NewServiceBase(), lifetime: lifetime}
 }
