@@ -35,7 +35,6 @@ type Service struct {
 
 // TODO(cmc)
 func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
-	gocql.TimeoutLimit = 10
 	cluster := gocql.NewCluster(addrs...)
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.NumConns = int(2)

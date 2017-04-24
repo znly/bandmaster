@@ -29,23 +29,25 @@ import (
 
 // TODO(cmc)
 var (
-	gm     = NewMaestro()
-	gmLock = &sync.RWMutex{}
+	_gm     = NewMaestro()
+	_gmLock = &sync.RWMutex{}
 )
 
 // TODO(cmc)
 func GlobalMaestro() *Maestro {
-	gmLock.RLock()
-	defer gmLock.RUnlock()
+	_gmLock.RLock()
+	defer _gmLock.RUnlock()
 
-	return gm
+	return _gm
 }
 
 // TODO(cmc)
-func ReplaceGlobalMaestro(m *Maestro) {
-	gmLock.Lock()
-	gm = m
-	gmLock.Unlock()
+func ReplaceGlobalMaestro(m *Maestro) *Maestro {
+	_gmLock.Lock()
+	cur := _gm
+	_gm = m
+	_gmLock.Unlock()
+	return cur
 }
 
 // -----------------------------------------------------------------------------

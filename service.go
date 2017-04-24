@@ -89,6 +89,18 @@ func (sb *ServiceBase) Required() bool {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
+func (sb *ServiceBase) String() string {
+	name := sb.Name()
+	req := "optional"
+	if sb.Required() {
+		req = "required"
+	}
+	return fmt.Sprintf("'%s' [%s]", name, req)
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
 func (sb *ServiceBase) addDependency(deps ...string) {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
@@ -117,18 +129,6 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 	}
 
 	return deps
-}
-
-// -----------------------------------------------------------------------------
-
-// TODO(cmc)
-func (sb *ServiceBase) String() string {
-	name := sb.Name()
-	req := "optional"
-	if sb.Required() {
-		req = "required"
-	}
-	return fmt.Sprintf("'%s' [%s]", name, req)
 }
 
 // -----------------------------------------------------------------------------
