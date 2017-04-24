@@ -66,7 +66,7 @@ func (s *Service) Start(ctx context.Context) error {
 		defer close(errC)
 		if err := session.Query(
 			"SELECT cql_version FROM system.local",
-		).Exec(); err != nil {
+		).WithContext(ctx).Exec(); err != nil {
 			session.Close()
 			errC <- err
 		}
