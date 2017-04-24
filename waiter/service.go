@@ -16,6 +16,7 @@ package waiter
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -29,15 +30,23 @@ import (
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
-	lifetime time.Duration
+	lifetime  time.Duration
+	lifecyle  context.Context
+	canceller context.CancelFunc
 }
 
 // TODO(cmc)
-func DefaultConfig() time.Duration { return time.Second * 10 }
+func DefaultConfig() time.Duration { return time.Second * 3 }
 
 // TODO(cmc)
 func New(lifetime time.Duration) bandmaster.Service {
-	return &Service{ServiceBase: bandmaster.NewServiceBase(), lifetime: lifetime}
+	ctx, canceller := context.WithCancel(context.Background())
+	return &Service{
+		ServiceBase: bandmaster.NewServiceBase(),
+		lifetime:    lifetime,
+		lifecyle:    ctx,
+		canceller:   canceller,
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -57,7 +66,31 @@ func (s *Service) Start(
 			log.Printf("hello there, %s!", dep)
 		}
 		<-time.After(s.lifetime) // stay alive for `lifetime`
+		s.canceller()
 	}()
 
 	return nil
+}
+
+// TODO(cmc)
+func (s *Service) Stop(ctx context.Context) error {
+	errC := make(chan error, 1)
+	go func() {
+		defer close(errC)
+		<-s.lifecyle.Done()
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TODO(cmc)
+func (s *Service) String() string {
+	return s.ServiceBase.String() + fmt.Sprintf(" @ (%v)", s.lifetime)
 }

@@ -163,6 +163,76 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
+func (m *Maestro) StopAll(ctx context.Context) <-chan error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	errC := make(chan error, len(m.services)+1)
+	defer close(errC)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(m.services))
+	for _, s := range m.services {
+		go func(ss Service) {
+			defer wg.Done()
+			err := m.stop(ctx, ss)
+			if err != nil {
+				errC <- err
+			}
+		}(s)
+	}
+	wg.Wait()
+
+	return errC
+}
+
+// TODO(cmc)
+// EXPECTS LOCK
+func (m *Maestro) stop(ctx context.Context, s Service) error {
+	name := s.Name()
+	zap.L().Info("stopping service...", zap.String("service", name))
+
+	base := serviceBase(s)
+	defer close(base.stopped)
+
+	for dep := range base.Dependencies() {
+		zap.L().Debug("waiting for dependency to stop",
+			zap.String("service", name), zap.String("dependency", dep),
+		)
+		err := <-m.services[dep].Stopped()
+		if err != nil {
+			zap.L().Debug("dependency failed to stop (ignored)",
+				zap.String("service", name), zap.String("dependency", dep),
+			)
+		} else {
+			zap.L().Debug("dependency stopped",
+				zap.String("service", name), zap.String("dependency", dep),
+			)
+		}
+	}
+
+	err := s.Stop(ctx)
+	if err != nil {
+		zap.L().Info("service failed to stop",
+			zap.String("service", name), zap.String("err", err.Error()),
+		)
+		err = &Error{
+			kind:       ErrServiceStopFailure,
+			service:    s,
+			serviceErr: err,
+		}
+		base.stopped <- err
+		return err
+	}
+
+	zap.L().Info("service successfully stopped", zap.String("service", s.String()))
+
+	return nil
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
 // EXPECTS LOCK
 func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 	for _, s := range m.services {

@@ -61,7 +61,7 @@ func New(p *redis.Pool) bandmaster.Service {
 func (s *Service) Start(
 	ctx context.Context, _ map[string]bandmaster.Service,
 ) error {
-	errC := make(chan error, 0)
+	errC := make(chan error, 1)
 	go func() {
 		defer close(errC)
 		c, err := s.pool.Dial()
@@ -70,6 +70,28 @@ func (s *Service) Start(
 			return
 		}
 		if _, err = c.Do("PING"); err != nil {
+			errC <- err
+			return
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// TODO(cmc)
+func (s *Service) Stop(ctx context.Context) error {
+	errC := make(chan error, 1)
+	go func() {
+		defer close(errC)
+		if err := s.pool.Close(); err != nil {
 			errC <- err
 			return
 		}

@@ -61,7 +61,7 @@ func (s *Service) Start(
 	}
 	c.SetTimeout(s.timeout)
 
-	errC := make(chan error, 0)
+	errC := make(chan error, 1)
 	go func() {
 		if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
 			_ = c.Close()
@@ -79,6 +79,26 @@ func (s *Service) Start(
 	}
 
 	s.c = c
+	return nil
+}
+
+// TODO(cmc)
+func (s *Service) Stop(ctx context.Context) error {
+	errC := make(chan error, 1)
+	go func() {
+		defer close(errC)
+		if err := s.c.Close(); err != nil {
+			errC <- err
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

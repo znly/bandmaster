@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
-	"github.com/znly/bandmaster/cql"
 	"github.com/znly/bandmaster/memcached"
 	"github.com/znly/bandmaster/redis"
 	"github.com/znly/bandmaster/waiter"
@@ -25,7 +24,7 @@ func main() {
 	m.AddService("mc-2", false, memcached.New(memcached.DefaultConfig()), "mc-1")
 	m.AddService("mc-3", true, memcached.New(memcached.DefaultConfig()), "mc-2")
 	m.AddService("rd-1", true, redis.New(redis.DefaultConfig("redis://localhost:6379/0")), "mc-2")
-	m.AddService("cql-1", true, cql.New(cql.DefaultConfig("localhost:9042")), "mc-2")
+	//m.AddService("cql-1", true, cql.New(cql.DefaultConfig("localhost:9042")), "mc-2")
 
 	ctx, canceller := context.WithTimeout(context.Background(), time.Second*5)
 	for err := range m.StartAll(ctx) {
@@ -38,6 +37,12 @@ func main() {
 				zap.L().Info(e.Error())
 			}
 		}
+	}
+	canceller()
+
+	ctx, canceller = context.WithTimeout(context.Background(), time.Second*5)
+	for err := range m.StopAll(ctx) {
+		zap.L().Info(err.Error())
 	}
 	canceller()
 }

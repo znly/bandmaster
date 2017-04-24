@@ -25,6 +25,7 @@ import (
 // TODO(cmc)
 type Service interface {
 	Start(ctx context.Context, deps map[string]Service) error
+	Stop(ctx context.Context) error
 
 	Name() string
 	Required() bool
@@ -32,6 +33,7 @@ type Service interface {
 	String() string
 
 	Started() <-chan error
+	Stopped() <-chan error
 }
 
 // -----------------------------------------------------------------------------
@@ -45,6 +47,7 @@ type ServiceBase struct {
 	directDeps map[string]struct{}
 
 	started chan error
+	stopped chan error
 }
 
 // TODO(cmc)
@@ -53,6 +56,7 @@ func NewServiceBase() *ServiceBase {
 		lock:       &sync.RWMutex{},
 		directDeps: map[string]struct{}{},
 		started:    make(chan error, 1),
+		stopped:    make(chan error, 1),
 	}
 }
 
@@ -118,6 +122,18 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
+func (sb *ServiceBase) String() string {
+	name := sb.Name()
+	req := "optional"
+	if sb.Required() {
+		req = "required"
+	}
+	return fmt.Sprintf("'%s' [%s]", name, req)
+}
+
+// -----------------------------------------------------------------------------
+
+// TODO(cmc)
 func (sb *ServiceBase) Started() <-chan error {
 	errC := make(chan error, cap(sb.started))
 	go func() {
@@ -130,11 +146,13 @@ func (sb *ServiceBase) Started() <-chan error {
 }
 
 // TODO(cmc)
-func (sb *ServiceBase) String() string {
-	name := sb.Name()
-	req := "optional"
-	if sb.Required() {
-		req = "required"
-	}
-	return fmt.Sprintf("'%s' [%s]", name, req)
+func (sb *ServiceBase) Stopped() <-chan error {
+	errC := make(chan error, cap(sb.stopped))
+	go func() {
+		for err := range sb.stopped {
+			errC <- err
+		}
+		close(errC)
+	}()
+	return sb.stopped
 }

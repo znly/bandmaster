@@ -32,6 +32,7 @@ const (
 
 	/* runtime */
 	ErrServiceStartFailure ErrorKind = iota // service failed to start
+	ErrServiceStopFailure  ErrorKind = iota // service failed to stop
 )
 
 // TODO(cmc)
@@ -67,6 +68,10 @@ func (e *Error) Error() string {
 	/* runtime */
 	case ErrServiceStartFailure:
 		return fmt.Sprintf("`%s`: service failed to start: %s",
+			e.service.Name(), e.serviceErr,
+		)
+	case ErrServiceStopFailure:
+		return fmt.Sprintf("`%s`: service failed to stop: %s",
 			e.service.Name(), e.serviceErr,
 		)
 

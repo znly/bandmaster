@@ -64,7 +64,7 @@ func (s *Service) Start(
 		return err
 	}
 
-	errC := make(chan error, 0)
+	errC := make(chan error, 1)
 	go func() {
 		defer close(errC)
 		if err := session.Query(
@@ -84,6 +84,25 @@ func (s *Service) Start(
 	}
 
 	s.s = session
+	return nil
+}
+
+// TODO(cmc)
+func (s *Service) Stop(ctx context.Context) error {
+	errC := make(chan error, 1)
+	go func() {
+		s.s.Close()
+		close(errC)
+	}()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errC:
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
