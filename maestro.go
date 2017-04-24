@@ -260,10 +260,13 @@ func (m *Maestro) hasCircularDeps(errC chan error) bool {
 	hasCircularDepsRec = func(
 		cur, parent Service, met map[string]struct{}, lvl uint,
 	) bool {
-		zap.L().Debug("checking circular dependencies",
-			zap.Uint("level", lvl),
-			zap.String("parent", parent.Name()), zap.String("current", cur.Name()),
-		)
+		if lvl > 0 {
+			zap.L().Debug("checking circular dependencies",
+				zap.Uint("level", lvl),
+				zap.String("current", cur.Name()),
+				zap.String("parent", parent.Name()),
+			)
+		}
 		if _, ok := met[cur.Name()]; ok {
 			errC <- errors.WithStack(&Error{
 				service:    parent,
