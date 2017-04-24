@@ -28,7 +28,27 @@ import (
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-var GlobalMaestro = NewMaestro()
+var (
+	gm     = NewMaestro()
+	gmLock = &sync.RWMutex{}
+)
+
+// TODO(cmc)
+func GlobalMaestro() *Maestro {
+	gmLock.RLock()
+	defer gmLock.RUnlock()
+
+	return gm
+}
+
+// TODO(cmc)
+func ReplaceGlobalMaestro(m *Maestro) {
+	gmLock.Lock()
+	gm = m
+	gmLock.Unlock()
+}
+
+// -----------------------------------------------------------------------------
 
 // TODO(cmc)
 type Maestro struct {

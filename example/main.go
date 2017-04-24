@@ -19,7 +19,7 @@ func main() {
 	zap.ReplaceGlobals(l)
 
 	var err error
-	m := bandmaster.GlobalMaestro
+	m := bandmaster.GlobalMaestro()
 
 	m.AddService("wn-1", false, waiter.New(waiter.DefaultConfig()), "mc-1", "mc-3")
 	m.AddService("mc-1", true, memcached.New(time.Second, "localhost:11211"), "rd-1")
