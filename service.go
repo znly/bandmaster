@@ -108,7 +108,7 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
 
-	deps := make(map[string]struct{}, len(sb.directDeps))
+	deps := make(map[string]struct{}, len(sb.directDeps)) // copy
 	for dep := range sb.directDeps {
 		deps[dep] = struct{}{}
 	}
@@ -119,5 +119,14 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (sb *ServiceBase) Started() <-chan error { return sb.started }
+func (sb *ServiceBase) Started() <-chan error {
+	errC := make(chan error, cap(sb.started))
+	go func() {
+		for err := range sb.started {
+			errC <- err
+		}
+		close(errC)
+	}()
+	return sb.started
+}
 func (sb *ServiceBase) Stopped() <-chan error { return sb.stopped }
