@@ -16,7 +16,6 @@ package bandmaster
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sync"
 
@@ -71,12 +70,12 @@ func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
 	defer m.lock.Unlock()
 
 	if _, ok := m.services[name]; ok {
-		panic(fmt.Sprintf("`%s`: service already exists", name))
+		panic(&Error{kind: ErrServiceAlreadyExists, serviceName: name})
 	}
 
 	base := serviceBase(s)
 	if base == nil { // panic if `s` doesn't inherit properly
-		panic(fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", name))
+		panic(&Error{kind: ErrServiceWithoutBase, serviceName: name})
 	}
 
 	base.setName(name)

@@ -25,6 +25,10 @@ const (
 	/* common */
 	ErrUnknown ErrorKind = iota // unknown error
 
+	/* fatal */
+	ErrServiceAlreadyExists ErrorKind = iota // service already exists
+	ErrServiceWithoutBase   ErrorKind = iota // service must inherit form ServiceBase
+
 	/* dependencies */
 	ErrDependencyMissing     ErrorKind = iota // no such dependency
 	ErrDependencyCircular    ErrorKind = iota // circular dependencies detected
@@ -37,10 +41,11 @@ const (
 
 // TODO(cmc)
 type Error struct {
-	kind       ErrorKind
-	service    Service
-	serviceErr error
-	dependency string
+	kind        ErrorKind
+	service     Service
+	serviceName string
+	serviceErr  error
+	dependency  string
 }
 
 func (e *Error) Service() Service { return e.service }
@@ -50,6 +55,12 @@ func (e *Error) Error() string {
 	/* common */
 	case ErrUnknown:
 		return "error: unknown"
+
+	/* fata */
+	case ErrServiceAlreadyExists:
+		return fmt.Sprintf("`%s`: service already exists", e.serviceName)
+	case ErrServiceWithoutBase:
+		return fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", e.serviceName)
 
 	/* dependencies */
 	case ErrDependencyMissing:
