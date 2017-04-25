@@ -65,10 +65,43 @@ func TestMaestro_GlobalInstance(t *testing.T) {
 	})
 }
 
+// -----------------------------------------------------------------------------
+
 func TestMaestro_AddService_Service(t *testing.T) {
-	/* already exists (panic) */
-	/* must inherit (panic) */
-	/* success */
+	m := NewMaestro()
+
+	t.Run("already-exists", func(t *testing.T) {
+		defer func() {
+			if err := recover(); err != nil {
+				assert.NotNil(t, err)
+				assert.IsType(t, &Error{}, err)
+				assert.Equal(t,
+					&Error{kind: ErrServiceAlreadyExists, serviceName: "A"}, err,
+				)
+			}
+		}()
+		m.AddService("A", true, &TestService{ServiceBase: NewServiceBase()})
+		m.AddService("A", false, &TestService{ServiceBase: NewServiceBase()})
+	})
+
+	t.Run("must-inherit", func(t *testing.T) {
+		defer func() {
+			if err := recover(); err != nil {
+				assert.NotNil(t, err)
+				assert.IsType(t, &Error{}, err)
+				assert.Equal(t,
+					&Error{kind: ErrServiceWithoutBase, serviceName: "B"}, err,
+				)
+			}
+		}()
+		m.AddService("B", true, &TestService{})
+	})
+
+	t.Run("success", func(t *testing.T) {
+		s := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("B", true, s)
+		assert.Equal(t, s, m.Service("B"))
+	})
 }
 
 func TestMaestro_StartAll_StopAll(t *testing.T) {
