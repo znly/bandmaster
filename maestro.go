@@ -96,6 +96,7 @@ func (m *Maestro) Service(name string) Service {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
+// Nothing is started in case of missing or circular dependencies.
 func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -276,10 +277,10 @@ func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 // EXPECTS LOCK
 func (m *Maestro) hasCircularDeps(errC chan error) bool {
 	var hasCircularDepsRec func(
-		cur, parent Service, met map[string]struct{}, lvl uint,
+		cur, parent Service, met map[string]uint, lvl uint,
 	) bool
 	hasCircularDepsRec = func(
-		cur, parent Service, met map[string]struct{}, lvl uint,
+		cur, parent Service, met map[string]uint, lvl uint,
 	) bool {
 		if lvl > 0 {
 			zap.L().Debug("checking circular dependencies",
@@ -289,18 +290,23 @@ func (m *Maestro) hasCircularDeps(errC chan error) bool {
 			)
 		}
 		if _, ok := met[cur.Name()]; ok {
+			circularDeps := make([]string, len(met)+1)
+			for dep, lvl := range met {
+				circularDeps[lvl] = dep
+			}
+			circularDeps[lvl] = cur.Name()
 			errC <- errors.WithStack(&Error{
-				service:    parent,
-				dependency: cur.Name(),
-				kind:       ErrDependencyCircular,
+				service:      m.services[circularDeps[0]],
+				circularDeps: circularDeps,
+				kind:         ErrDependencyCircular,
 			})
 			return true
 		}
-		metRec := make(map[string]struct{}, len(met))
-		for name := range met {
-			metRec[name] = struct{}{}
+		metRec := make(map[string]uint, len(met))
+		for name, lvl := range met {
+			metRec[name] = lvl
 		}
-		metRec[cur.Name()] = struct{}{}
+		metRec[cur.Name()] = lvl
 		for name := range serviceBase(cur).Dependencies() {
 			if hasCircularDepsRec(m.services[name], cur, metRec, lvl+1) {
 				return true
@@ -310,7 +316,7 @@ func (m *Maestro) hasCircularDeps(errC chan error) bool {
 	}
 
 	for _, s := range m.services {
-		if hasCircularDepsRec(s, s, map[string]struct{}{}, 0) {
+		if hasCircularDepsRec(s, s, map[string]uint{}, 0) {
 			return true
 		}
 	}

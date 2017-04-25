@@ -14,7 +14,10 @@
 
 package bandmaster
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // -----------------------------------------------------------------------------
 
@@ -41,11 +44,12 @@ const (
 
 // TODO(cmc)
 type Error struct {
-	kind        ErrorKind
-	service     Service
-	serviceName string
-	serviceErr  error
-	dependency  string
+	kind         ErrorKind
+	service      Service
+	serviceName  string
+	serviceErr   error
+	dependency   string
+	circularDeps []string
 }
 
 func (e *Error) Service() Service { return e.service }
@@ -68,8 +72,8 @@ func (e *Error) Error() string {
 			e.service.Name(), e.dependency,
 		)
 	case ErrDependencyCircular:
-		return fmt.Sprintf("`%s`: circular dependency with `%s` detected",
-			e.service.Name(), e.dependency,
+		return fmt.Sprintf("`%s`: circular dependencies detected: {%s}",
+			e.service.Name(), strings.Join(e.circularDeps, " -> "),
 		)
 	case ErrDependencyUnavailable:
 		return fmt.Sprintf("`%s`: dependency `%s` failed to start",
