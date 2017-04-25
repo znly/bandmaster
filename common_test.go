@@ -22,13 +22,16 @@ import (
 
 // TestServiceimplements a Service for testing purposes.
 type TestService struct {
-	*ServiceBase // inheritance
+	*ServiceBase     // inheritance
+	started, stopped bool
 }
 
 func (s *TestService) Start(context.Context, map[string]Service) error {
+	s.started = true
 	return nil // always succeed
 }
 
 func (s *TestService) Stop(context.Context) error {
+	s.stopped = true
 	return nil // always succeed
 }

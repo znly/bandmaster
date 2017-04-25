@@ -15,6 +15,7 @@
 package bandmaster
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -23,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -132,8 +134,59 @@ func TestMaestro_AddService_Service(t *testing.T) {
 }
 
 func TestMaestro_StartAll_StopAll(t *testing.T) {
-	/* missing deps (error) */
 	/* circular deps (error) */
 	/* failure (dep failed) */
 	/* success */
+
+	t.Run("missing-deps", func(t *testing.T) {
+		m := NewMaestro()
+		m.AddService("A", true, &TestService{ServiceBase: NewServiceBase()})
+		m.AddService("B", true, &TestService{ServiceBase: NewServiceBase()}, "A")
+		s := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("C", true, s, "A", "B", "D")
+		err := errors.Cause(<-m.StartAll(context.Background()))
+		errExpected := &Error{kind: ErrDependencyMissing, service: s, dependency: "D"}
+		assert.Equal(t, errExpected, err)
+	})
+
+	t.Run("circular-deps", func(t *testing.T) {
+		m := NewMaestro()
+		a := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("A", true, a, "D")
+		b := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("B", true, b, "A")
+		c := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("C", true, c, "D")
+		d := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("D", true, d, "B")
+		err := errors.Cause(<-m.StartAll(context.Background()))
+		assert.IsType(t, &Error{}, err)
+		e := err.(*Error)
+		errExpected := &Error{kind: ErrDependencyCircular}
+		switch e.service.Name() {
+		case "A":
+			errExpected.service = a
+			errExpected.circularDeps = []string{"A", "D", "B", "A"}
+		case "B":
+			errExpected.service = b
+			errExpected.circularDeps = []string{"B", "A", "D", "B"}
+		case "C":
+			errExpected.service = c
+			errExpected.circularDeps = []string{"C", "D", "B", "A", "D"}
+		case "D":
+			errExpected.service = d
+			errExpected.circularDeps = []string{"D", "B", "A", "D"}
+		default:
+			assert.Fail(t, "should never get here")
+		}
+		assert.Equal(t, errExpected, err)
+		assert.False(t, a.started)
+		assert.False(t, a.stopped)
+		assert.False(t, b.started)
+		assert.False(t, b.stopped)
+		assert.False(t, c.started)
+		assert.False(t, c.stopped)
+		assert.False(t, d.started)
+		assert.False(t, d.stopped)
+	})
 }
