@@ -134,10 +134,6 @@ func TestMaestro_AddService_Service(t *testing.T) {
 }
 
 func TestMaestro_StartAll_StopAll(t *testing.T) {
-	/* circular deps (error) */
-	/* failure (dep failed) */
-	/* success */
-
 	t.Run("missing-deps", func(t *testing.T) {
 		m := NewMaestro()
 		m.AddService("A", true, &TestService{ServiceBase: NewServiceBase()})
@@ -188,5 +184,41 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.False(t, c.stopped)
 		assert.False(t, d.started)
 		assert.False(t, d.stopped)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		m := NewMaestro()
+
+		a := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("A", true, a)
+		b := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("B", true, b, "A")
+		c := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("C", true, c, "A", "B")
+
+		assert.Nil(t, <-m.StartAll(context.Background()))
+		assert.True(t, a.started)
+		assert.False(t, a.stopped)
+		assert.Nil(t, <-a.Started())
+		assert.True(t, b.started)
+		assert.False(t, b.stopped)
+		assert.Nil(t, <-b.Started())
+		assert.True(t, c.started)
+		assert.False(t, c.stopped)
+		assert.Nil(t, <-c.Started())
+
+		assert.Nil(t, <-m.StopAll(context.Background()))
+		assert.True(t, a.started)
+		assert.True(t, a.stopped)
+		assert.Nil(t, <-a.Started())
+		assert.Nil(t, <-a.Stopped())
+		assert.True(t, b.started)
+		assert.True(t, b.stopped)
+		assert.Nil(t, <-b.Started())
+		assert.Nil(t, <-b.Stopped())
+		assert.True(t, c.started)
+		assert.True(t, c.stopped)
+		assert.Nil(t, <-c.Started())
+		assert.Nil(t, <-c.Stopped())
 	})
 }
