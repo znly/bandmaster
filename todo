@@ -1,11 +1,6 @@
-test circular deps
-test missing deps
 test each service implem
-test servicebase inheritance
 
 doc
-
-improve circular error (show relationships)
 
 2 must do:
 - inherit from ServiceBase

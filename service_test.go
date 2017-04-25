@@ -35,6 +35,5 @@ func TestService_String(t *testing.T) {
 }
 
 func TestService_State(t *testing.T) {
-	/* started & stopped */
-	/* races */
+	/* already tested by `TestMaestro_StartAll_StopAll/success` */
 }
