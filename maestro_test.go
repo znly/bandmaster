@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -101,6 +102,32 @@ func TestMaestro_AddService_Service(t *testing.T) {
 		s := &TestService{ServiceBase: NewServiceBase()}
 		m.AddService("B", true, s)
 		assert.Equal(t, s, m.Service("B"))
+	})
+
+	t.Run("parallel", func(t *testing.T) {
+		nbRoutines := 128 * runtime.GOMAXPROCS(0)
+		m := NewMaestro()
+		wg := &sync.WaitGroup{}
+		wg.Add(nbRoutines)
+		for i := 0; i < nbRoutines; i++ {
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						s := &TestService{ServiceBase: NewServiceBase()}
+						name := strconv.Itoa(ii) + strconv.Itoa(int(rand.Int63()))
+						m.AddService(name, true, s)
+						assert.Equal(t, s, m.Service(name))
+					}
+				}
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
 	})
 }
 
