@@ -41,6 +41,7 @@ func TestService_Metadata(t *testing.T) {
 	})
 
 	t.Run("parallel", func(t *testing.T) {
+		ts.setName("notempty")
 		nbRoutines := 128 * runtime.GOMAXPROCS(0)
 		wg := &sync.WaitGroup{}
 		wg.Add(nbRoutines * 2)
@@ -88,8 +89,17 @@ func TestService_Dependencies(t *testing.T) {
 	/* see also TestMaestro_AddService_Service/depends-on-itself */
 	/* see also TestMaestro_AddService_Service/duplicate-dependency */
 
+	t.Run("success", func(t *testing.T) {
+		ts := NewTestService()
+		ts.addDependency("X", "Y", "Z")
+		assert.Equal(t,
+			map[string]struct{}{"X": {}, "Y": {}, "Z": {}}, ts.Dependencies(),
+		)
+	})
+
 	t.Run("parallel", func(t *testing.T) {
 		ts := NewTestService()
+		ts.addDependency("xxx")
 		nbRoutines := 128 * runtime.GOMAXPROCS(0)
 		wg := &sync.WaitGroup{}
 		wg.Add(nbRoutines)
@@ -119,8 +129,41 @@ func TestService_Dependencies(t *testing.T) {
 }
 
 func TestService_String(t *testing.T) {
-	/* races */
-	/* success */
+	t.Run("default", func(t *testing.T) {
+		ts := NewTestService()
+		assert.Equal(t, "'' [optional]", ts.String())
+		ts.setName("xxx")
+		assert.Equal(t, "'xxx' [optional]", ts.String())
+		ts.setName("yyy")
+		assert.Equal(t, "'yyy' [optional]", ts.String())
+	})
+
+	t.Run("parallel", func(t *testing.T) {
+		ts := NewTestService()
+		nbRoutines := 128 * runtime.GOMAXPROCS(0)
+		wg := &sync.WaitGroup{}
+		wg.Add(nbRoutines)
+		for i := 0; i < nbRoutines; i++ {
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						if rand.Intn(2) == 0 {
+							ts.setName(time.Now().Format(time.RFC3339))
+						} else {
+							assert.NotEmpty(t, ts.String())
+						}
+					}
+				}
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
+	})
 }
 
 func TestService_State(t *testing.T) {
