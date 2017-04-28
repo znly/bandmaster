@@ -207,6 +207,33 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.False(t, c.stopped)
 		assert.Nil(t, <-c.Started())
 
+		/* idempotency */
+		assert.Nil(t, <-m.StartAll(context.Background()))
+		assert.True(t, a.started)
+		assert.False(t, a.stopped)
+		assert.Nil(t, <-a.Started())
+		assert.True(t, b.started)
+		assert.False(t, b.stopped)
+		assert.Nil(t, <-b.Started())
+		assert.True(t, c.started)
+		assert.False(t, c.stopped)
+		assert.Nil(t, <-c.Started())
+
+		assert.Nil(t, <-m.StopAll(context.Background()))
+		assert.True(t, a.started)
+		assert.True(t, a.stopped)
+		assert.Nil(t, <-a.Started())
+		assert.Nil(t, <-a.Stopped())
+		assert.True(t, b.started)
+		assert.True(t, b.stopped)
+		assert.Nil(t, <-b.Started())
+		assert.Nil(t, <-b.Stopped())
+		assert.True(t, c.started)
+		assert.True(t, c.stopped)
+		assert.Nil(t, <-c.Started())
+		assert.Nil(t, <-c.Stopped())
+
+		/* idempotency */
 		assert.Nil(t, <-m.StopAll(context.Background()))
 		assert.True(t, a.started)
 		assert.True(t, a.stopped)
