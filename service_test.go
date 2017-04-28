@@ -14,14 +14,73 @@
 
 package bandmaster
 
-import "testing"
+import (
+	"math/rand"
+	"runtime"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
 
 // -----------------------------------------------------------------------------
 
 func TestService_Metadata(t *testing.T) {
-	/* name & required */
-	/* races */
-	/* success */
+	ts := &TestService{ServiceBase: NewServiceBase()}
+
+	t.Run("name", func(t *testing.T) {
+		ts.setName("bob")
+		assert.Equal(t, "bob", ts.Name())
+	})
+
+	t.Run("required", func(t *testing.T) {
+		ts.setRequired(true)
+		assert.True(t, ts.Required())
+	})
+
+	t.Run("parallel", func(t *testing.T) {
+		nbRoutines := 128 * runtime.GOMAXPROCS(0)
+		wg := &sync.WaitGroup{}
+		wg.Add(nbRoutines * 2)
+		for i := 0; i < nbRoutines; i++ {
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						if rand.Intn(2) == 0 {
+							ts.setName(time.Now().Format(time.RFC3339))
+						} else {
+							assert.NotEmpty(t, ts.Name())
+						}
+					}
+				}
+				wg.Done()
+			}(i)
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						if rand.Intn(2) == 0 {
+							ts.setName(time.Now().Format(time.RFC3339))
+						} else {
+							_ = ts.Required()
+						}
+					}
+				}
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
+	})
 }
 
 func TestService_Dependencies(t *testing.T) {
