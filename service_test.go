@@ -17,6 +17,7 @@ package bandmaster
 import (
 	"math/rand"
 	"runtime"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -84,8 +85,37 @@ func TestService_Metadata(t *testing.T) {
 }
 
 func TestService_Dependencies(t *testing.T) {
-	/* races */
-	/* success */
+	/* see also TestMaestro_AddService_Service/depends-on-itself */
+	/* see also TestMaestro_AddService_Service/duplicate-dependency */
+
+	t.Run("parallel", func(t *testing.T) {
+		ts := NewTestService()
+		nbRoutines := 128 * runtime.GOMAXPROCS(0)
+		wg := &sync.WaitGroup{}
+		wg.Add(nbRoutines)
+		for i := 0; i < nbRoutines; i++ {
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						if rand.Intn(2) == 0 {
+							ts.addDependency(
+								strconv.Itoa(ii) + strconv.Itoa(int(rand.Int63())),
+							)
+						} else {
+							assert.NotEmpty(t, ts.Dependencies())
+						}
+					}
+				}
+				wg.Done()
+			}(i)
+		}
+		wg.Wait()
+	})
 }
 
 func TestService_String(t *testing.T) {
