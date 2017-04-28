@@ -69,11 +69,11 @@ func (e *Error) Error() string {
 		return fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", e.serviceName)
 	case ErrServiceDependsOnItself:
 		return fmt.Sprintf("`%s`: service depends on its own self",
-			e.service.Name(),
+			e.serviceName,
 		)
 	case ErrServiceDuplicateDependency:
 		return fmt.Sprintf("`%s`: service already depends on `%s`",
-			e.service.Name(), e.dependency,
+			e.serviceName, e.dependency,
 		)
 
 	/* dependencies */

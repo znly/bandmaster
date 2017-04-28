@@ -114,6 +114,21 @@ func TestMaestro_AddService_Service(t *testing.T) {
 		m.AddService("X", true, NewTestService(), "X")
 	})
 
+	t.Run("duplicate-dependency", func(t *testing.T) {
+		defer func() {
+			if err := recover(); err != nil {
+				assert.NotNil(t, err)
+				assert.IsType(t, &Error{}, err)
+				assert.Equal(t, &Error{
+					kind:        ErrServiceDuplicateDependency,
+					serviceName: "X",
+					dependency:  "B",
+				}, err)
+			}
+		}()
+		m.AddService("X", true, NewTestService(), "B", "B")
+	})
+
 	t.Run("success", func(t *testing.T) {
 		s := NewTestService()
 		m.AddService("B", true, s)
