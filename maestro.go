@@ -146,7 +146,7 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 				panic(r) // not a CCC error, forward panic
 			}
 		}()
-		defer close(base.started)
+		close(base.started)
 	}()
 
 	deps := make(map[string]Service, len(base.Dependencies()))
@@ -236,7 +236,7 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 				panic(r) // not a CCC error, forward panic
 			}
 		}()
-		defer close(base.stopped)
+		close(base.stopped)
 	}()
 
 	for dep := range base.Dependencies() {
