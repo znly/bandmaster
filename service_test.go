@@ -27,7 +27,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Metadata(t *testing.T) {
-	ts := &TestService{ServiceBase: NewServiceBase()}
+	ts := NewTestService()
 
 	t.Run("name", func(t *testing.T) {
 		ts.setName("bob")

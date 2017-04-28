@@ -83,8 +83,8 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				)
 			}
 		}()
-		m.AddService("A", true, &TestService{ServiceBase: NewServiceBase()})
-		m.AddService("A", false, &TestService{ServiceBase: NewServiceBase()})
+		m.AddService("A", true, NewTestService())
+		m.AddService("A", false, NewTestService())
 	})
 
 	t.Run("must-inherit", func(t *testing.T) {
@@ -100,8 +100,22 @@ func TestMaestro_AddService_Service(t *testing.T) {
 		m.AddService("B", true, &TestService{})
 	})
 
+	t.Run("depends-on-itself", func(t *testing.T) {
+		defer func() {
+			if err := recover(); err != nil {
+				assert.NotNil(t, err)
+				assert.IsType(t, &Error{}, err)
+				assert.Equal(t, &Error{
+					kind:        ErrServiceDependsOnItself,
+					serviceName: "X",
+				}, err)
+			}
+		}()
+		m.AddService("X", true, NewTestService(), "X")
+	})
+
 	t.Run("success", func(t *testing.T) {
-		s := &TestService{ServiceBase: NewServiceBase()}
+		s := NewTestService()
 		m.AddService("B", true, s)
 		assert.Equal(t, s, m.Service("B"))
 	})
@@ -120,7 +134,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 					case <-end:
 						return
 					default:
-						s := &TestService{ServiceBase: NewServiceBase()}
+						s := NewTestService()
 						name := strconv.Itoa(ii) + strconv.Itoa(int(rand.Int63()))
 						m.AddService(name, true, s)
 						assert.Equal(t, s, m.Service(name))
@@ -136,9 +150,9 @@ func TestMaestro_AddService_Service(t *testing.T) {
 func TestMaestro_StartAll_StopAll(t *testing.T) {
 	t.Run("missing-deps", func(t *testing.T) {
 		m := NewMaestro()
-		m.AddService("A", true, &TestService{ServiceBase: NewServiceBase()})
-		m.AddService("B", true, &TestService{ServiceBase: NewServiceBase()}, "A")
-		s := &TestService{ServiceBase: NewServiceBase()}
+		m.AddService("A", true, NewTestService())
+		m.AddService("B", true, NewTestService(), "A")
+		s := NewTestService()
 		m.AddService("C", true, s, "A", "B", "D")
 		err := errors.Cause(<-m.StartAll(context.Background()))
 		errExpected := &Error{kind: ErrDependencyMissing, service: s, dependency: "D"}
@@ -147,13 +161,13 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 
 	t.Run("circular-deps", func(t *testing.T) {
 		m := NewMaestro()
-		a := &TestService{ServiceBase: NewServiceBase()}
+		a := NewTestService()
 		m.AddService("A", true, a, "D")
-		b := &TestService{ServiceBase: NewServiceBase()}
+		b := NewTestService()
 		m.AddService("B", true, b, "A")
-		c := &TestService{ServiceBase: NewServiceBase()}
+		c := NewTestService()
 		m.AddService("C", true, c, "D")
-		d := &TestService{ServiceBase: NewServiceBase()}
+		d := NewTestService()
 		m.AddService("D", true, d, "B")
 		err := errors.Cause(<-m.StartAll(context.Background()))
 		assert.IsType(t, &Error{}, err)
@@ -189,11 +203,11 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		m := NewMaestro()
 
-		a := &TestService{ServiceBase: NewServiceBase()}
+		a := NewTestService()
 		m.AddService("A", true, a)
-		b := &TestService{ServiceBase: NewServiceBase()}
+		b := NewTestService()
 		m.AddService("B", true, b, "A")
-		c := &TestService{ServiceBase: NewServiceBase()}
+		c := NewTestService()
 		m.AddService("C", true, c, "A", "B")
 
 		assert.Nil(t, <-m.StartAll(context.Background()))

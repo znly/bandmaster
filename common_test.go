@@ -26,6 +26,10 @@ type TestService struct {
 	started, stopped bool
 }
 
+func NewTestService() *TestService {
+	return &TestService{ServiceBase: NewServiceBase()}
+}
+
 func (s *TestService) Start(context.Context, map[string]Service) error {
 	s.started = true
 	return nil // always succeed
