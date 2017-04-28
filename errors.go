@@ -29,8 +29,10 @@ const (
 	ErrUnknown ErrorKind = iota // unknown error
 
 	/* fatal */
-	ErrServiceAlreadyExists ErrorKind = iota // service already exists
-	ErrServiceWithoutBase   ErrorKind = iota // service must inherit form ServiceBase
+	ErrServiceAlreadyExists       ErrorKind = iota // service already exists
+	ErrServiceWithoutBase         ErrorKind = iota // service must inherit form ServiceBase
+	ErrServiceDependsOnItself     ErrorKind = iota // service depends on its own self
+	ErrServiceDuplicateDependency ErrorKind = iota // service has duplicate dependencies
 
 	/* dependencies */
 	ErrDependencyMissing     ErrorKind = iota // no such dependency
@@ -60,11 +62,19 @@ func (e *Error) Error() string {
 	case ErrUnknown:
 		return "error: unknown"
 
-	/* fata */
+	/* fatal */
 	case ErrServiceAlreadyExists:
 		return fmt.Sprintf("`%s`: service already exists", e.serviceName)
 	case ErrServiceWithoutBase:
 		return fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", e.serviceName)
+	case ErrServiceDependsOnItself:
+		return fmt.Sprintf("`%s`: service depends on its own self",
+			e.service.Name(),
+		)
+	case ErrServiceDuplicateDependency:
+		return fmt.Sprintf("`%s`: service already depends on `%s`",
+			e.service.Name(), e.dependency,
+		)
 
 	/* dependencies */
 	case ErrDependencyMissing:

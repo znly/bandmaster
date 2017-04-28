@@ -107,12 +107,14 @@ func (sb *ServiceBase) addDependency(deps ...string) {
 
 	for _, dep := range deps {
 		if dep == sb.name {
-			panic(fmt.Sprintf("`%s`: service depends on itself", sb.name))
+			panic(&Error{kind: ErrServiceDependsOnItself, serviceName: sb.name})
 		}
 		if _, ok := sb.directDeps[dep]; ok {
-			panic(fmt.Sprintf(
-				"`%s`: service already depends on `%s`", sb.name, dep,
-			))
+			panic(&Error{
+				kind:        ErrServiceDuplicateDependency,
+				serviceName: sb.name,
+				dependency:  dep,
+			})
 		}
 		sb.directDeps[dep] = struct{}{}
 	}
