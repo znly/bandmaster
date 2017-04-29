@@ -25,14 +25,14 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// Service implements a Redis service based on the 'garyburd/redigo' package.
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
 	pool *redis.Pool
 }
 
-// TODO(cmc)
+// DefaultConfig returns a `redis.Pool` with sane defaults.
 func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     int(32),
@@ -47,7 +47,11 @@ func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 	}
 }
 
-// TODO(cmc)
+// New creates a new service using the provided `redis.Pool`.
+// Use `DefaultConfig` to get a pre-configured `redis.Pool`.
+//
+// It doesn't open any connection nor does it do any kind of I/O; i.e. it
+// cannot fail.
 func New(p *redis.Pool) bandmaster.Service {
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(),
@@ -57,7 +61,13 @@ func New(p *redis.Pool) bandmaster.Service {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// Start opens a connection and PINGs the server: if everything goes smoothly,
+// the service is marked as 'started'; otherwise, an error is returned.
+//
+// The given context defines the deadline for the above-mentionned operations.
+//
+// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+// have to be called by the end-user of the service.
 func (s *Service) Start(
 	ctx context.Context, _ map[string]bandmaster.Service,
 ) error {
@@ -69,6 +79,7 @@ func (s *Service) Start(
 			errC <- err
 			return
 		}
+		defer c.Close()
 		if _, err = c.Do("PING"); err != nil {
 			errC <- err
 			return
@@ -86,11 +97,20 @@ func (s *Service) Start(
 	return nil
 }
 
-// TODO(cmc)
+// Stop closes the underlying `redis.Pool`: if everything goes smoothly,
+// the service is marked as 'stopped'; otherwise, an error is returned.
+//
+// The given context defines the deadline for the above-mentionned operations.
+//
+// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+// have to be called by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
 	errC := make(chan error, 1)
 	go func() {
 		defer close(errC)
+		// If the context gets cancelled (unlikely), this routine will leak
+		// until the Close() call actually returns.
+		// We don't really care.
 		if err := s.pool.Close(); err != nil {
 			errC <- err
 			return
@@ -110,5 +130,12 @@ func (s *Service) Stop(ctx context.Context) error {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
-func Client(s Service) *redis.Pool { return s.pool }
+// Client returns the underlying Redis pool of the given service, or nil if
+// it is not actually a `redis.Service`.
+func Client(s bandmaster.Service) *redis.Pool {
+	ss, ok := s.(*Service)
+	if !ok {
+		return nil
+	}
+	return ss.pool
+}
