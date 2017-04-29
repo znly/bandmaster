@@ -61,7 +61,6 @@ func TestMaestro_GlobalInstance(t *testing.T) {
 						}
 					}
 				}
-				wg.Done()
 			}(i)
 		}
 		wg.Wait()
@@ -155,7 +154,6 @@ func TestMaestro_AddService_Service(t *testing.T) {
 						assert.Equal(t, s, m.Service(name))
 					}
 				}
-				wg.Done()
 			}(i)
 		}
 		wg.Wait()

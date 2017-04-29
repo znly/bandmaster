@@ -61,7 +61,6 @@ func TestService_Metadata(t *testing.T) {
 						}
 					}
 				}
-				wg.Done()
 			}(i)
 			go func(ii int) {
 				defer wg.Done()
@@ -78,7 +77,6 @@ func TestService_Metadata(t *testing.T) {
 						}
 					}
 				}
-				wg.Done()
 			}(i)
 		}
 		wg.Wait()
@@ -121,7 +119,6 @@ func TestService_Dependencies(t *testing.T) {
 						}
 					}
 				}
-				wg.Done()
 			}(i)
 		}
 		wg.Wait()
@@ -159,7 +156,6 @@ func TestService_String(t *testing.T) {
 						}
 					}
 				}
-				wg.Done()
 			}(i)
 		}
 		wg.Wait()
