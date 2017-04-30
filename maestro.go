@@ -93,6 +93,22 @@ func (m *Maestro) Service(name string) Service {
 	return m.services[name]
 }
 
+// TODO(cmc)
+func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
+	m.lock.RLock()
+	s := m.services[name]
+	m.lock.RUnlock()
+
+	if s == nil {
+		return nil
+	}
+	if err := <-s.Started(ctx); err != nil {
+		return nil
+	}
+
+	return s
+}
+
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
