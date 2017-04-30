@@ -155,7 +155,7 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 			zap.String("service", name), zap.String("dependency", dep),
 		)
 		d := m.services[dep]
-		err := <-d.Started()
+		err := <-d.Started(ctx)
 		if err != nil {
 			zap.L().Debug("dependency failed to start",
 				zap.String("service", name), zap.String("dependency", dep),
@@ -243,7 +243,7 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 		zap.L().Debug("waiting for dependency to stop",
 			zap.String("service", name), zap.String("dependency", dep),
 		)
-		err := <-m.services[dep].Stopped()
+		err := <-m.services[dep].Stopped(ctx)
 		if err != nil {
 			zap.L().Debug("dependency failed to stop (ignored)",
 				zap.String("service", name), zap.String("dependency", dep),

@@ -32,8 +32,8 @@ type Service interface {
 
 	String() string
 
-	Started() <-chan error
-	Stopped() <-chan error
+	Started(ctx context.Context) <-chan error
+	Stopped(ctx context.Context) <-chan error
 }
 
 // -----------------------------------------------------------------------------
@@ -136,25 +136,43 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 // -----------------------------------------------------------------------------
 
 // TODO(cmc)
-func (sb *ServiceBase) Started() <-chan error {
+func (sb *ServiceBase) Started(ctx context.Context) <-chan error {
 	errC := make(chan error, cap(sb.started))
 	go func() {
-		for err := range sb.started {
-			errC <- err
+		defer close(errC)
+		for {
+			select {
+			case err, ok := <-sb.started:
+				if !ok {
+					return
+				}
+				errC <- err
+			case <-ctx.Done():
+				errC <- ctx.Err()
+				return
+			}
 		}
-		close(errC)
 	}()
 	return sb.started
 }
 
 // TODO(cmc)
-func (sb *ServiceBase) Stopped() <-chan error {
+func (sb *ServiceBase) Stopped(ctx context.Context) <-chan error {
 	errC := make(chan error, cap(sb.stopped))
 	go func() {
-		for err := range sb.stopped {
-			errC <- err
+		defer close(errC)
+		for {
+			select {
+			case err, ok := <-sb.stopped:
+				if !ok {
+					return
+				}
+				errC <- err
+			case <-ctx.Done():
+				errC <- ctx.Err()
+				return
+			}
 		}
-		close(errC)
 	}()
 	return sb.stopped
 }
