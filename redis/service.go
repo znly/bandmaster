@@ -32,17 +32,66 @@ type Service struct {
 	pool *redis.Pool
 }
 
-// DefaultConfig returns a `redis.Pool` with sane defaults.
+// DefaultConfig returns a `redis.Pool` with the following defaults:
+//
+//   &redis.Pool{
+//   	// Maximum number of idle connections in the pool.
+//   	MaxIdle: int(32),
+//   	// Maximum number of connections allocated by the pool at a given time.
+//   	// When zero, there is no limit on the number of connections in the pool.
+//   	MaxActive: int(32),
+//   	// Close connections after remaining idle for this duration. If the value
+//   	// is zero, then idle connections are not closed. Applications should set
+//   	// the timeout to a value less than the server's timeout.
+//   	IdleTimeout: 0,
+//   	// If Wait is true and the pool is at the MaxActive limit, then Get() waits
+//   	// for a connection to be returned to the pool before returning.
+//   	Wait: true,
+//   	// Dial is an application supplied function for creating and configuring a
+//   	// connection.
+//   	//
+//   	// The connection returned from Dial must not be in a special state
+//   	// (subscribed to pubsub channel, transaction started, ...).
+//   	Dial: func() (redis.Conn, error) {
+//   		c, err := redis.DialURL(uri, opts...)
+//   		return c, errors.WithStack(err)
+//   	},
+//   	// TestOnBorrow is an optional application supplied function for checking
+//   	// the health of an idle connection before the connection is used again by
+//   	// the application. Argument t is the time that the connection was returned
+//   	// to the pool. If the function returns an error, then the connection is
+//   	// closed.
+//   	TestOnBorrow: func(c redis.Conn, t time.Time) error { return c.Err() },
+//   }
+//
 func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     int(32),
-		MaxActive:   int(32),
+		// Maximum number of idle connections in the pool.
+		MaxIdle: 32,
+		// Maximum number of connections allocated by the pool at a given time.
+		// When zero, there is no limit on the number of connections in the pool.
+		MaxActive: 32,
+		// Close connections after remaining idle for this duration. If the value
+		// is zero, then idle connections are not closed. Applications should set
+		// the timeout to a value less than the server's timeout.
 		IdleTimeout: 0,
-		Wait:        true,
+		// If Wait is true and the pool is at the MaxActive limit, then Get() waits
+		// for a connection to be returned to the pool before returning.
+		Wait: true,
+		// Dial is an application supplied function for creating and configuring a
+		// connection.
+		//
+		// The connection returned from Dial must not be in a special state
+		// (subscribed to pubsub channel, transaction started, ...).
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.DialURL(uri, opts...)
 			return c, errors.WithStack(err)
 		},
+		// TestOnBorrow is an optional application supplied function for checking
+		// the health of an idle connection before the connection is used again by
+		// the application. Argument t is the time that the connection was returned
+		// to the pool. If the function returns an error, then the connection is
+		// closed.
 		TestOnBorrow: func(c redis.Conn, t time.Time) error { return c.Err() },
 	}
 }
