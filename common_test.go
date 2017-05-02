@@ -16,23 +16,36 @@ package bandmaster
 
 import (
 	"context"
+	"errors"
+	"sync"
 )
 
 // -----------------------------------------------------------------------------
 
+var _testServiceErrNotAllowedToStart = errors.New("not allowed to start yet!")
+
 // TestServiceimplements a Service for testing purposes.
 type TestService struct {
 	*ServiceBase     // inheritance
+	lock             *sync.RWMutex
+	dontStart        bool // retry backoff
 	started, stopped bool
 }
 
 func NewTestService() *TestService {
-	return &TestService{ServiceBase: NewServiceBase()}
+	return &TestService{ServiceBase: NewServiceBase(), lock: &sync.RWMutex{}}
 }
 
 func (s *TestService) Start(context.Context, map[string]Service) error {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	if s.dontStart {
+		return _testServiceErrNotAllowedToStart
+	}
 	s.started = true
-	return nil // always succeed
+
+	return nil
 }
 
 func (s *TestService) Stop(context.Context) error {

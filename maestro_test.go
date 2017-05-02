@@ -276,5 +276,56 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.True(t, c.stopped)
 		assert.Nil(t, <-c.Started(ctx))
 		assert.Nil(t, <-c.Stopped(ctx))
+
+		wg.Wait()
+	})
+
+	t.Run("retry-backoff", func(t *testing.T) {
+		m := NewMaestro()
+
+		a := NewTestService()
+		a.dontStart = true
+		b := NewTestService()
+		b.dontStart = true
+		m.AddServiceWithBackoff("A", true, 10, time.Millisecond*250, a)
+		m.AddServiceWithBackoff("B", true, 1, time.Millisecond*100, b)
+
+		ctx := context.Background()
+
+		wg := &sync.WaitGroup{}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second * 2)
+			a.lock.Lock()
+			a.dontStart = false
+			a.lock.Unlock()
+			s := m.ServiceReady(ctx, "A")
+			assert.Equal(t, a, s)
+		}()
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second * 2)
+			b.lock.Lock()
+			b.dontStart = false
+			b.lock.Unlock()
+			s := m.ServiceReady(ctx, "B")
+			assert.Nil(t, s)
+			_ = s
+		}()
+		errExpected := &Error{
+			kind:       ErrServiceStartFailure,
+			service:    b,
+			serviceErr: _testServiceErrNotAllowedToStart,
+		}
+		assert.Equal(t, errExpected, <-m.StartAll(ctx))
+		wg.Wait()
+
+		assert.Nil(t, <-a.Started(ctx))
+		assert.Equal(t, errExpected, <-b.Started(ctx))
+
+		assert.Nil(t, <-m.StopAll(ctx))
+		assert.Nil(t, <-a.Stopped(ctx))
+		assert.Nil(t, <-b.Stopped(ctx))
 	})
 }
