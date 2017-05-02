@@ -154,42 +154,26 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 
 // TODO(cmc)
 func (sb *ServiceBase) Started(ctx context.Context) <-chan error {
-	errC := make(chan error, cap(sb.started))
-	go func() {
-		defer close(errC)
-		for {
-			select {
-			case err, ok := <-sb.started:
-				if !ok {
-					return
-				}
-				errC <- err
-			case <-ctx.Done():
-				errC <- ctx.Err()
-				return
-			}
-		}
-	}()
-	return sb.started
+	return cloneErrChannel(ctx, sb.started)
 }
 
 // TODO(cmc)
 func (sb *ServiceBase) Stopped(ctx context.Context) <-chan error {
-	errC := make(chan error, cap(sb.stopped))
+	return cloneErrChannel(ctx, sb.stopped)
+}
+
+// TODO(cmc)
+func cloneErrChannel(ctx context.Context, c chan error) <-chan error {
+	errC := make(chan error, cap(c))
 	go func() {
 		defer close(errC)
-		for {
-			select {
-			case err, ok := <-sb.stopped:
-				if !ok {
-					return
-				}
-				errC <- err
-			case <-ctx.Done():
-				errC <- ctx.Err()
-				return
-			}
+		select {
+		case err := <-c:
+			c <- err
+			errC <- err
+		case <-ctx.Done():
+			errC <- ctx.Err()
 		}
 	}()
-	return sb.stopped
+	return errC
 }

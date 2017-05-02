@@ -223,9 +223,17 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		c := NewTestService()
 		m.AddService("C", true, c, "A", "B")
 
-		ctx, canceller := context.WithCancel(context.Background())
+		ctx := context.Background()
 
-		assert.Nil(t, <-m.StartAll(context.Background()))
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s := m.ServiceReady(ctx, "C")
+			assert.Equal(t, c, s)
+		}()
+
+		assert.Nil(t, <-m.StartAll(ctx))
 		assert.True(t, a.started)
 		assert.False(t, a.stopped)
 		assert.Nil(t, <-a.Started(ctx))
@@ -237,7 +245,7 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.Nil(t, <-c.Started(ctx))
 
 		/* idempotency */
-		assert.Nil(t, <-m.StartAll(context.Background()))
+		assert.Nil(t, <-m.StartAll(ctx))
 		assert.True(t, a.started)
 		assert.False(t, a.stopped)
 		assert.Nil(t, <-a.Started(ctx))
@@ -248,7 +256,7 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.False(t, c.stopped)
 		assert.Nil(t, <-c.Started(ctx))
 
-		assert.Nil(t, <-m.StopAll(context.Background()))
+		assert.Nil(t, <-m.StopAll(ctx))
 		assert.True(t, a.started)
 		assert.True(t, a.stopped)
 		assert.Nil(t, <-a.Started(ctx))
@@ -263,7 +271,7 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		assert.Nil(t, <-c.Stopped(ctx))
 
 		/* idempotency */
-		assert.Nil(t, <-m.StopAll(context.Background()))
+		assert.Nil(t, <-m.StopAll(ctx))
 		assert.True(t, a.started)
 		assert.True(t, a.stopped)
 		assert.Nil(t, <-a.Started(ctx))

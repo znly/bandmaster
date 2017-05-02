@@ -164,18 +164,6 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	zap.L().Info("starting service...", zap.String("service", name))
 
 	base := serviceBase(s)
-	defer func() {
-		defer func() {
-			if r := recover(); r != nil {
-				if err, ok := r.(error); ok &&
-					err.Error() == "close of closed channel" {
-					return // ignore panic, start() is idempotent
-				}
-				panic(r) // not a CCC error, forward panic
-			}
-		}()
-		close(base.started)
-	}()
 
 	deps := make(map[string]Service, len(base.Dependencies()))
 	for dep := range base.Dependencies() {
@@ -273,18 +261,6 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 	zap.L().Info("stopping service...", zap.String("service", name))
 
 	base := serviceBase(s)
-	defer func() {
-		defer func() {
-			if r := recover(); r != nil {
-				if err, ok := r.(error); ok &&
-					err.Error() == "close of closed channel" {
-					return // ignore panic, stop() is idempotent
-				}
-				panic(r) // not a CCC error, forward panic
-			}
-		}()
-		close(base.stopped)
-	}()
 
 	for dep := range base.Dependencies() {
 		zap.L().Debug("waiting for dependency to stop",
@@ -314,6 +290,10 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 		}
 		base.stopped <- err
 		return err
+	}
+	select {
+	case base.stopped <- nil: // don't close this channel, ever
+	default: // idempotency
 	}
 
 	zap.L().Info("service successfully stopped", zap.String("service", s.String()))
