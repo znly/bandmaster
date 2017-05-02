@@ -16,8 +16,15 @@ package bandmaster
 
 import (
 	"math/rand"
+
+	"go.uber.org/zap"
 )
 
 // -----------------------------------------------------------------------------
 
-func init() { rand.Seed(42) }
+func init() {
+	rand.Seed(42)
+
+	l, _ := zap.NewDevelopment()
+	zap.ReplaceGlobals(l)
+}
