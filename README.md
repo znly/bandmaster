@@ -6,7 +6,8 @@
 
 *Bandmaster* is a simple and easily extendable Go library for managing runtime dependencies such as reliance on external datastores, APIs, message-queues, etc.
 
-Although it is nothing extraordinary; it does provide a stand-alone, fully tested & thread-safe package that implements some commonly needed features when dealing with 3rd-party clients, including but not limited to:
+*Bandmaster* is nothing extraordinary; it simply provides a stand-alone, fully tested & thread-safe package that implements some most-commonly needed features when dealing with 3rd-party clients, including but not limited to:
+- automatic parallelization & synchronization of the initialization process
 - dependency-tree semantics between services (i.e. service A depends on B & C which depends on B)
 - configurable retries & exponential backoff when faced with initialization failures
 - a global, thread-safe service registry so packages and goroutines can safely share clients
@@ -16,11 +17,14 @@ Although it is nothing extraordinary; it does provide a stand-alone, fully teste
 *Bandmaster* comes with native support for some of the big names:
 - Memcached via [rainycape/memcache](https://github.com/rainycape/memcache)
 - Redis via [garyburd/redigo](https://github.com/garyburd/redigo)
-- CQL-based datastores (e.g. Cassandra) via [gocql/gocql](https://github.com/gocql/gocql)
+- CQL-based datastores (e.g. Cassandra & ScyllaDB) via [gocql/gocql](https://github.com/gocql/gocql)
 - SQL-based databases (e.g. PostgreSQL, MySQL...) via [jmoiron/sqlx](https://github.com/jmoiron/sqlx)
 - NATS via [nats-io/go-nats](https://github.com/nats-io/go-nats)
+- Kafka via [bsm/sarama-cluster](https://github.com/bsm/sarama-cluster)
 
 In addition to these standard implementations, *Bandmaster* provides a straightforward extension API so you can easily implement your own services; see [this section](#implementing-a-custom-service) for more details.
+
+*Bandmaster* is all about starting, exposing and stopping services; it doesn't cover configuration nor does it care about what happens to a service during its lifetime.
 
 ---
 
