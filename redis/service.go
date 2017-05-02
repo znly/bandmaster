@@ -151,7 +151,7 @@ func (s *Service) Start(
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+// NOTE: Stop is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
 	errC := make(chan error, 1)

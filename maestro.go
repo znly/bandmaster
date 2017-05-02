@@ -16,8 +16,10 @@ package bandmaster
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -66,6 +68,15 @@ func NewMaestro() *Maestro {
 
 // TODO(cmc)
 func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
+	m.AddServiceWithBackoff(name, req, 0, 0, s, deps...)
+}
+
+// TODO(cmc)
+func (m *Maestro) AddServiceWithBackoff(
+	name string, req bool,
+	retries uint, initialBackoff time.Duration,
+	s Service, deps ...string,
+) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -80,6 +91,7 @@ func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
 
 	base.setName(name)
 	base.setRequired(req)
+	base.setRetryConf(retries, initialBackoff)
 	base.addDependency(deps...)
 
 	m.services[name] = s
@@ -117,7 +129,7 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	errC := make(chan error, len(m.services)+1)
+	errC := make(chan error, len(m.services)+1) // +1 because I don't like surprises
 	defer close(errC)
 
 	zap.L().Debug("looking for missing dependencies...")
@@ -132,7 +144,7 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(m.services))
 	for _, s := range m.services {
-		go func(ss Service) {
+		go func(ss Service) { // services are started in parallel
 			defer wg.Done()
 			err := m.start(ctx, ss)
 			if err != nil {
@@ -177,9 +189,9 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 				zap.String("service", name), zap.String("dependency", dep),
 			)
 			err = errors.WithStack(&Error{
+				kind:       ErrDependencyUnavailable,
 				service:    s,
 				dependency: dep,
-				kind:       ErrDependencyUnavailable,
 			})
 			base.started <- err
 			return err
@@ -191,17 +203,36 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	}
 
 	err := s.Start(ctx, deps)
-	if err != nil {
-		zap.L().Info("service failed to start",
-			zap.String("service", name), zap.String("err", err.Error()),
-		)
-		err = &Error{
-			kind:       ErrServiceStartFailure,
-			service:    s,
-			serviceErr: err,
+	retries, ib := base.RetryConf()
+	attempts := uint(0)
+	for err != nil {
+		attempts++
+		if attempts >= retries {
+			zap.L().Warn("service failed to start",
+				zap.String("service", name), zap.String("err", err.Error()),
+				zap.Uint("attempt", attempts),
+			)
+			err = &Error{
+				kind:       ErrServiceStartFailure,
+				service:    s,
+				serviceErr: err,
+			}
+			base.started <- err
+			return err
+		} else {
+			msg := fmt.Sprintf("service failed to start, retrying in %v...", ib)
+			zap.L().Info(msg,
+				zap.String("service", name), zap.String("err", err.Error()),
+				zap.Uint("attempt", attempts),
+			)
+			time.Sleep(ib)
+			ib *= 2
 		}
-		base.started <- err
-		return err
+		err = s.Start(ctx, deps)
+	}
+	select {
+	case base.started <- nil: // don't close this channel, ever
+	default: // idempotency
 	}
 
 	zap.L().Info("service successfully started", zap.String("service", s.String()))
@@ -222,7 +253,7 @@ func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(m.services))
 	for _, s := range m.services {
-		go func(ss Service) {
+		go func(ss Service) { // services are stopped in parallel
 			defer wg.Done()
 			err := m.stop(ctx, ss)
 			if err != nil {

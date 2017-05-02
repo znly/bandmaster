@@ -40,11 +40,18 @@ func TestService_Metadata(t *testing.T) {
 		assert.True(t, ts.Required())
 	})
 
+	t.Run("retry-conf", func(t *testing.T) {
+		ts.setRetryConf(42, time.Second*2)
+		retries, ib := ts.RetryConf()
+		assert.Equal(t, uint(42), retries)
+		assert.Equal(t, time.Second*2, ib)
+	})
+
 	t.Run("parallel", func(t *testing.T) {
 		ts.setName("notempty")
 		nbRoutines := 128 * runtime.GOMAXPROCS(0)
 		wg := &sync.WaitGroup{}
-		wg.Add(nbRoutines * 2)
+		wg.Add(nbRoutines * 3)
 		for i := 0; i < nbRoutines; i++ {
 			go func(ii int) {
 				defer wg.Done()
@@ -74,6 +81,22 @@ func TestService_Metadata(t *testing.T) {
 							ts.setName(time.Now().Format(time.RFC3339))
 						} else {
 							_ = ts.Required()
+						}
+					}
+				}
+			}(i)
+			go func(ii int) {
+				defer wg.Done()
+				end := time.After(time.Second)
+				for {
+					select {
+					case <-end:
+						return
+					default:
+						if rand.Intn(2) == 0 {
+							ts.setRetryConf(uint(rand.Uint32()), time.Second*time.Duration(rand.Int()))
+						} else {
+							_, _ = ts.RetryConf()
 						}
 					}
 				}

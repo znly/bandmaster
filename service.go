@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,6 +30,7 @@ type Service interface {
 
 	Name() string
 	Required() bool
+	RetryConf() (uint, time.Duration)
 
 	String() string
 
@@ -42,9 +44,11 @@ type Service interface {
 type ServiceBase struct {
 	lock *sync.RWMutex
 
-	name       string
-	required   bool
-	directDeps map[string]struct{}
+	name           string
+	required       bool
+	retries        uint
+	initialBackoff time.Duration
+	directDeps     map[string]struct{}
 
 	started chan error
 	stopped chan error
@@ -84,6 +88,19 @@ func (sb *ServiceBase) Required() bool {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
 	return sb.required
+}
+
+// TODO(cmc)
+func (sb *ServiceBase) setRetryConf(retries uint, initialBackoff time.Duration) {
+	sb.lock.Lock()
+	sb.retries = retries
+	sb.initialBackoff = initialBackoff
+	sb.lock.Unlock()
+}
+func (sb *ServiceBase) RetryConf() (uint, time.Duration) {
+	sb.lock.RLock()
+	defer sb.lock.RUnlock()
+	return sb.retries, sb.initialBackoff
 }
 
 // -----------------------------------------------------------------------------
