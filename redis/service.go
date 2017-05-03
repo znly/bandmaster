@@ -36,10 +36,10 @@ type Service struct {
 //
 //   &redis.Pool{
 //   	// Maximum number of idle connections in the pool.
-//   	MaxIdle: int(32),
+//   	MaxIdle: 32,
 //   	// Maximum number of connections allocated by the pool at a given time.
 //   	// When zero, there is no limit on the number of connections in the pool.
-//   	MaxActive: int(32),
+//   	MaxActive: 32,
 //   	// Close connections after remaining idle for this duration. If the value
 //   	// is zero, then idle connections are not closed. Applications should set
 //   	// the timeout to a value less than the server's timeout.
@@ -179,7 +179,7 @@ func (s *Service) Stop(ctx context.Context) error {
 
 // -----------------------------------------------------------------------------
 
-// Client returns the underlying Redis pool of the given service, or nil if
+// Client returns the underlying `redis.Pool` of the given service, or nil if
 // it is not actually a `redis.Service`.
 func Client(s bandmaster.Service) *redis.Pool {
 	ss, ok := s.(*Service)

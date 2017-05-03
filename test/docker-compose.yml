@@ -6,3 +6,9 @@ services:
         ports:
             - "6379:6379"
         restart: on-failure
+
+    nats:
+        image: nats:0.9.6
+        ports:
+            - "4222:4222"
+        restart: on-failure

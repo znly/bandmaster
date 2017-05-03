@@ -58,11 +58,11 @@ func (e *Error) Service() Service { return e.service }
 
 func (e *Error) Error() string {
 	switch e.kind {
-	/* common */
+	/* Common */
 	case ErrUnknown:
 		return "error: unknown"
 
-	/* fatal */
+	/* Fatal */
 	case ErrServiceAlreadyExists:
 		return fmt.Sprintf("`%s`: service already exists", e.serviceName)
 	case ErrServiceWithoutBase:
@@ -76,7 +76,7 @@ func (e *Error) Error() string {
 			e.serviceName, e.dependency,
 		)
 
-	/* dependencies */
+	/* Dependencies */
 	case ErrDependencyMissing:
 		return fmt.Sprintf("`%s`: missing dependency `%s`",
 			e.service.Name(), e.dependency,
@@ -90,7 +90,7 @@ func (e *Error) Error() string {
 			e.service.Name(), e.dependency,
 		)
 
-	/* runtime */
+	/* Runtime */
 	case ErrServiceStartFailure:
 		return fmt.Sprintf("`%s`: service failed to start: %s",
 			e.service.Name(), e.serviceErr,
