@@ -85,21 +85,26 @@ func New(opts *nats.Options) bandmaster.Service {
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Start is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Start relies on the Maestro holding the service's base lock.
 func (s *Service) Start(
 	ctx context.Context, _ map[string]bandmaster.Service,
 ) error {
-	c, err := s.opts.Connect()
-	if err != nil {
-		return err
-	}
-	s.c = c
-
 	errC := make(chan error, 1)
 	go func() {
 		defer close(errC)
-		if c.Status() != nats.CONNECTED {
+		var err error
+		if s.c == nil { // idempotency
+			s.c, err = s.opts.Connect()
+			if err != nil {
+				errC <- err
+				return
+			}
+		}
+		if s.c.Status() != nats.CONNECTED {
 			errC <- errors.New("nats: connection failure") // TODO(cmc): typed error
 		}
 	}()
@@ -120,16 +125,22 @@ func (s *Service) Start(
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Stop is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Stop is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Stop relies on the Maestro holding the service's base lock.
 func (s *Service) Stop(ctx context.Context) error {
 	errC := make(chan error, 1)
 	go func() {
-		defer close(errC)
 		// If the context gets cancelled (unlikely), this routine will leak
 		// until the Close() call actually returns.
 		// We don't really care.
-		s.c.Close()
+		defer close(errC)
+		if s.c != nil {
+			s.c.Close()
+			s.c = nil // idempotency & restart support
+		}
 	}()
 	select {
 	case <-ctx.Done():
