@@ -45,59 +45,60 @@ const (
 )
 
 // TODO(cmc)
+// /!\ only Kind field is guarantee to be present
 type Error struct {
-	kind         ErrorKind
-	service      Service
-	serviceName  string
-	serviceErr   error
-	dependency   string
-	circularDeps []string
+	Kind ErrorKind
+
+	Service     Service
+	ServiceName string
+	ServiceErr  error
+
+	Dependency   string
+	CircularDeps []string
 }
 
-func (e *Error) Service() Service { return e.service }
-
 func (e *Error) Error() string {
-	switch e.kind {
+	switch e.Kind {
 	/* Common */
 	case ErrUnknown:
 		return "error: unknown"
 
 	/* Fatal */
 	case ErrServiceAlreadyExists:
-		return fmt.Sprintf("`%s`: service already exists", e.serviceName)
+		return fmt.Sprintf("`%s`: service already exists", e.ServiceName)
 	case ErrServiceWithoutBase:
-		return fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", e.serviceName)
+		return fmt.Sprintf("`%s`: service *must* inherit from `ServiceBase`", e.ServiceName)
 	case ErrServiceDependsOnItself:
 		return fmt.Sprintf("`%s`: service depends on its own self",
-			e.serviceName,
+			e.ServiceName,
 		)
 	case ErrServiceDuplicateDependency:
 		return fmt.Sprintf("`%s`: service already depends on `%s`",
-			e.serviceName, e.dependency,
+			e.ServiceName, e.Dependency,
 		)
 
 	/* Dependencies */
 	case ErrDependencyMissing:
 		return fmt.Sprintf("`%s`: missing dependency `%s`",
-			e.service.Name(), e.dependency,
+			e.Service.Name(), e.Dependency,
 		)
 	case ErrDependencyCircular:
 		return fmt.Sprintf("`%s`: circular dependencies detected: {%s}",
-			e.service.Name(), strings.Join(e.circularDeps, " -> "),
+			e.Service.Name(), strings.Join(e.CircularDeps, " -> "),
 		)
 	case ErrDependencyUnavailable:
 		return fmt.Sprintf("`%s`: dependency `%s` failed to start",
-			e.service.Name(), e.dependency,
+			e.Service.Name(), e.Dependency,
 		)
 
 	/* Runtime */
 	case ErrServiceStartFailure:
 		return fmt.Sprintf("`%s`: service failed to start: %s",
-			e.service.Name(), e.serviceErr,
+			e.Service.Name(), e.ServiceErr,
 		)
 	case ErrServiceStopFailure:
 		return fmt.Sprintf("`%s`: service failed to stop: %s",
-			e.service.Name(), e.serviceErr,
+			e.Service.Name(), e.ServiceErr,
 		)
 
 	default:

@@ -78,7 +78,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t,
-					&Error{kind: ErrServiceAlreadyExists, serviceName: "A"}, err,
+					&Error{Kind: ErrServiceAlreadyExists, ServiceName: "A"}, err,
 				)
 			}
 		}()
@@ -92,7 +92,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t,
-					&Error{kind: ErrServiceWithoutBase, serviceName: "B"}, err,
+					&Error{Kind: ErrServiceWithoutBase, ServiceName: "B"}, err,
 				)
 			}
 		}()
@@ -105,8 +105,8 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t, &Error{
-					kind:        ErrServiceDependsOnItself,
-					serviceName: "X",
+					Kind:        ErrServiceDependsOnItself,
+					ServiceName: "X",
 				}, err)
 			}
 		}()
@@ -119,9 +119,9 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t, &Error{
-					kind:        ErrServiceDuplicateDependency,
-					serviceName: "X",
-					dependency:  "B",
+					Kind:        ErrServiceDuplicateDependency,
+					ServiceName: "X",
+					Dependency:  "B",
 				}, err)
 			}
 		}()
@@ -168,7 +168,7 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		s := NewTestService()
 		m.AddService("C", true, s, "A", "B", "D")
 		err := errors.Cause(<-m.StartAll(context.Background()))
-		errExpected := &Error{kind: ErrDependencyMissing, service: s, dependency: "D"}
+		errExpected := &Error{Kind: ErrDependencyMissing, Service: s, Dependency: "D"}
 		assert.Equal(t, errExpected, err)
 	})
 
@@ -185,20 +185,20 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		err := errors.Cause(<-m.StartAll(context.Background()))
 		assert.IsType(t, &Error{}, err)
 		e := err.(*Error)
-		errExpected := &Error{kind: ErrDependencyCircular}
-		switch e.service.Name() {
+		errExpected := &Error{Kind: ErrDependencyCircular}
+		switch e.Service.Name() {
 		case "A":
-			errExpected.service = a
-			errExpected.circularDeps = []string{"A", "D", "B", "A"}
+			errExpected.Service = a
+			errExpected.CircularDeps = []string{"A", "D", "B", "A"}
 		case "B":
-			errExpected.service = b
-			errExpected.circularDeps = []string{"B", "A", "D", "B"}
+			errExpected.Service = b
+			errExpected.CircularDeps = []string{"B", "A", "D", "B"}
 		case "C":
-			errExpected.service = c
-			errExpected.circularDeps = []string{"C", "D", "B", "A", "D"}
+			errExpected.Service = c
+			errExpected.CircularDeps = []string{"C", "D", "B", "A", "D"}
 		case "D":
-			errExpected.service = d
-			errExpected.circularDeps = []string{"D", "B", "A", "D"}
+			errExpected.Service = d
+			errExpected.CircularDeps = []string{"D", "B", "A", "D"}
 		default:
 			assert.Fail(t, "should never get here")
 		}
@@ -322,9 +322,9 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 			_ = s
 		}()
 		errExpected := &Error{
-			kind:       ErrServiceStartFailure,
-			service:    b,
-			serviceErr: _testServiceErrNotAllowedToStart,
+			Kind:       ErrServiceStartFailure,
+			Service:    b,
+			ServiceErr: _testServiceErrNotAllowedToStart,
 		}
 		assert.Equal(t, errExpected, <-m.StartAll(ctx))
 		wg.Wait()

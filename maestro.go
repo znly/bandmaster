@@ -81,12 +81,12 @@ func (m *Maestro) AddServiceWithBackoff(
 	defer m.lock.Unlock()
 
 	if _, ok := m.services[name]; ok {
-		panic(&Error{kind: ErrServiceAlreadyExists, serviceName: name})
+		panic(&Error{Kind: ErrServiceAlreadyExists, ServiceName: name})
 	}
 
 	base := serviceBase(s)
 	if base == nil { // panic if `s` doesn't inherit properly
-		panic(&Error{kind: ErrServiceWithoutBase, serviceName: name})
+		panic(&Error{Kind: ErrServiceWithoutBase, ServiceName: name})
 	}
 
 	base.setName(name)
@@ -177,9 +177,9 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 				zap.String("service", name), zap.String("dependency", dep),
 			)
 			err = errors.WithStack(&Error{
-				kind:       ErrDependencyUnavailable,
-				service:    s,
-				dependency: dep,
+				Kind:       ErrDependencyUnavailable,
+				Service:    s,
+				Dependency: dep,
 			})
 			base.started <- err
 			return err
@@ -201,9 +201,9 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 				zap.Uint("attempt", attempts),
 			)
 			err = &Error{
-				kind:       ErrServiceStartFailure,
-				service:    s,
-				serviceErr: err,
+				Kind:       ErrServiceStartFailure,
+				Service:    s,
+				ServiceErr: err,
 			}
 			base.started <- err
 			return err
@@ -216,7 +216,9 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 			time.Sleep(ib)
 			ib *= 2
 		}
+		base.lock.Lock() // TODO(cmc): test this somehow
 		err = s.Start(ctx, deps)
+		base.lock.Unlock()
 	}
 	select {
 	case base.started <- nil: // don't close this channel, ever
@@ -278,15 +280,17 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 		}
 	}
 
+	base.lock.Lock() // TODO(cmc): test this somehow
 	err := s.Stop(ctx)
+	base.lock.Unlock()
 	if err != nil {
 		zap.L().Info("service failed to stop",
 			zap.String("service", name), zap.String("err", err.Error()),
 		)
 		err = &Error{
-			kind:       ErrServiceStopFailure,
-			service:    s,
-			serviceErr: err,
+			Kind:       ErrServiceStopFailure,
+			Service:    s,
+			ServiceErr: err,
 		}
 		base.stopped <- err
 		return err
@@ -311,9 +315,9 @@ func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 		for dep := range base.Dependencies() {
 			if _, ok := m.services[dep]; !ok {
 				errC <- errors.WithStack(&Error{
-					service:    s,
-					dependency: dep,
-					kind:       ErrDependencyMissing,
+					Service:    s,
+					Dependency: dep,
+					Kind:       ErrDependencyMissing,
 				})
 				failure = true
 			}
@@ -345,9 +349,9 @@ func (m *Maestro) hasCircularDeps(errC chan error) bool {
 			}
 			circularDeps[lvl] = cur.Name()
 			errC <- errors.WithStack(&Error{
-				service:      m.services[circularDeps[0]],
-				circularDeps: circularDeps,
-				kind:         ErrDependencyCircular,
+				Service:      m.services[circularDeps[0]],
+				CircularDeps: circularDeps,
+				Kind:         ErrDependencyCircular,
 			})
 			return true
 		}

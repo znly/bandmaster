@@ -9,9 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
-	"github.com/znly/bandmaster/memcached"
-	"github.com/znly/bandmaster/redis"
+	"github.com/znly/bandmaster/services/memcached"
+	"github.com/znly/bandmaster/services/redis"
 )
+
+// -----------------------------------------------------------------------------
 
 func main() {
 	l, _ := zap.NewDevelopment()
@@ -32,7 +34,7 @@ func main() {
 		err = errors.Cause(err)
 		switch e := err.(type) {
 		case *bandmaster.Error:
-			if e.Service().Required() {
+			if e.Service.Required() {
 				zap.L().Error(e.Error())
 			} else {
 				zap.L().Info(e.Error())
