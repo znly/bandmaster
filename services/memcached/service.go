@@ -43,7 +43,7 @@ func DefaultConfig() (time.Duration, string) {
 // TODO(cmc)
 func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(),
+		ServiceBase: bandmaster.NewServiceBase(), // inheritance
 		addrs:       addrs,
 		timeout:     timeout,
 	}

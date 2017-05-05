@@ -17,7 +17,6 @@ package nats
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/nats-io/nats"
 	"github.com/znly/bandmaster"
@@ -74,7 +73,7 @@ func DefaultConfig(addrs ...string) *nats.Options {
 // cannot fail.
 func New(opts *nats.Options) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(),
+		ServiceBase: bandmaster.NewServiceBase(), // inheritance
 		opts:        opts,
 	}
 }
@@ -101,7 +100,7 @@ func (s *Service) Start(
 	go func() {
 		defer close(errC)
 		if c.Status() != nats.CONNECTED {
-			errC <- errors.New("nats: connection failure") // TODO(cmc): error
+			errC <- errors.New("nats: connection failure") // TODO(cmc): typed error
 		}
 	}()
 	select {
@@ -146,13 +145,12 @@ func (s *Service) Stop(ctx context.Context) error {
 
 // -----------------------------------------------------------------------------
 
-// Client returns the underlying `nats.Conn` of the given service, or nil if
-// it is not actually a `nats.Service`.
+// Client returns the underlying `nats.Conn` of the given service.
+//
+// It assumes that the service is ready; i.e. it might return nil if it's
+// actually not.
+//
+// NOTE: This will panic if `s` is not a `kafka.Service`.
 func Client(s bandmaster.Service) *nats.Conn {
-	fmt.Printf("s = %#v\n", s)
-	ss, ok := s.(*Service)
-	if !ok {
-		return nil
-	}
-	return ss.c
+	return s.(*Service).c // allowed to panic
 }

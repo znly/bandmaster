@@ -47,7 +47,7 @@ func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
 // TODO(cmc)
 func New(cc *gocql.ClusterConfig) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(),
+		ServiceBase: bandmaster.NewServiceBase(), // inheritance
 		cc:          cc,
 	}
 }

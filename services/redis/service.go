@@ -103,7 +103,7 @@ func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 // cannot fail.
 func New(p *redis.Pool) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(),
+		ServiceBase: bandmaster.NewServiceBase(), // inheritance
 		pool:        p,
 	}
 }
@@ -179,12 +179,12 @@ func (s *Service) Stop(ctx context.Context) error {
 
 // -----------------------------------------------------------------------------
 
-// Client returns the underlying `redis.Pool` of the given service, or nil if
-// it is not actually a `redis.Service`.
+// Client returns the underlying `redis.Pool` of the given service.
+//
+// It assumes that the service is ready; i.e. it might return nil if it's
+// actually not.
+//
+// NOTE: This will panic if `s` is not a `kafka.Service`.
 func Client(s bandmaster.Service) *redis.Pool {
-	ss, ok := s.(*Service)
-	if !ok {
-		return nil
-	}
-	return ss.pool
+	return s.(*Service).pool // allowed to panic
 }
