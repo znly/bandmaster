@@ -85,7 +85,7 @@ func DefaultConfig(
 
 	// If enabled, successfully delivered messages will be returned on the
 	// successes channel.
-	config.Producer.Return.Successes = true
+	config.Producer.Return.Successes = false
 	// If enabled, messages that failed to deliver will be returned on the
 	// Errors channel, including error.
 	config.Producer.Return.Errors = true
@@ -130,6 +130,8 @@ func New(conf *sarama_cluster.Config,
 	}
 }
 
+// TODO(cmc): NewConsumerOnly, NewProducerOnly
+
 // -----------------------------------------------------------------------------
 
 // Start checks the validity of the configuration then creates a new Kafka
@@ -138,8 +140,11 @@ func New(conf *sarama_cluster.Config,
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Start is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Start relies on the Maestro holding the service's base lock.
 func (s *Service) Start(
 	ctx context.Context, _ map[string]bandmaster.Service,
 ) error {
@@ -151,18 +156,21 @@ func (s *Service) Start(
 			errC <- err
 			return
 		}
-		s.c, err = sarama_cluster.NewConsumer(
-			s.addrs, s.consumerGroupID, s.consumerTopics, s.conf,
-		)
-		if err != nil {
-			errC <- err
-			return
+		if s.c == nil { // idempotency
+			s.c, err = sarama_cluster.NewConsumer(
+				s.addrs, s.consumerGroupID, s.consumerTopics, s.conf,
+			)
+			if err != nil {
+				errC <- err
+				return
+			}
 		}
-		s.p, err = sarama.NewAsyncProducer(s.addrs, &s.conf.Config)
-		if err != nil {
-			_ = s.c.Close()
-			errC <- err
-			return
+		if s.p == nil { // idempotency
+			s.p, err = sarama.NewAsyncProducer(s.addrs, &s.conf.Config)
+			if err != nil {
+				errC <- err
+				return
+			}
 		}
 	}()
 	select {
@@ -183,23 +191,32 @@ func (s *Service) Start(
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Stop is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Stop is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Stop relies on the Maestro holding the service's base lock.
 func (s *Service) Stop(ctx context.Context) error {
 	errC := make(chan error, 1)
 	go func() {
-		defer close(errC)
-		s.canceller()
 		// If the context gets cancelled (unlikely), this routine will leak
 		// until the Close() call actually returns.
 		// We don't really care.
-		if err := s.c.Close(); err != nil {
-			errC <- err
-			return
+		defer close(errC)
+		s.canceller()
+		if s.c != nil {
+			if err := s.c.Close(); err != nil {
+				errC <- err
+				return
+			}
+			s.c = nil // idempotency & restart support
 		}
-		if err := s.p.Close(); err != nil {
-			errC <- err
-			return
+		if s.p != nil {
+			if err := s.p.Close(); err != nil {
+				errC <- err
+				return
+			}
+			s.c = nil // idempotency & restart support
 		}
 	}()
 	select {
@@ -224,7 +241,7 @@ func (s *Service) Stop(ctx context.Context) error {
 // the deadline of the wait period.
 //
 // Calling this function more than once on a given `kafka.Service` will result
-// in undefined behavior (and not the good kind).
+// in undefined behavior (not the nice kind).
 //
 // NOTE: This will panic if `s` is not a `kafka.Service`.
 func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
@@ -292,14 +309,14 @@ func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
 	return nil
 }
 
-// WatchConsumerEvents starts the logging routines that watch the notification
-// and error events of the underlying Kafka consumer, if the corresponding
+// WatchProducerEvents starts the logging routines that watch the notification
+// and error events of the underlying Kafka producer, if the corresponding
 // options have been enabled in its configuration.
 //
 // This function waits for the service to be ready, it will block if it's not.
 //
 // Calling this function more than once on a given `kafka.Service` will result
-// in undefined behavior (and not the good kind).
+// in undefined behavior (not the nice kind).
 //
 // NOTE: This will panic if `s` is not a `kafka.Service`.
 func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
@@ -312,7 +329,7 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 		go func() {
 			for {
 				select {
-				case <-ctx.Done():
+				case <-ss.ctx.Done():
 					return
 				case err, ok := <-ss.p.Errors():
 					if !ok {
@@ -332,7 +349,7 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 		go func() {
 			for {
 				select {
-				case <-ctx.Done():
+				case <-ss.ctx.Done():
 					return
 				case msg, ok := <-ss.p.Successes():
 					if !ok {
