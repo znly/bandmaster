@@ -115,8 +115,11 @@ func New(p *redis.Pool) bandmaster.Service {
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Start is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Start is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Start relies on the Maestro holding the service's base lock.
 func (s *Service) Start(
 	ctx context.Context, _ map[string]bandmaster.Service,
 ) error {
@@ -151,15 +154,18 @@ func (s *Service) Start(
 //
 // The given context defines the deadline for the above-mentionned operations.
 //
-// NOTE: Stop is used by BandMaster's internal machinery, it shouldn't ever
+//
+// NOTE1: Stop is used by BandMaster's internal machinery, it shouldn't ever
 // have to be called by the end-user of the service.
+//
+// NOTE2: Stop relies on the Maestro holding the service's base lock.
 func (s *Service) Stop(ctx context.Context) error {
 	errC := make(chan error, 1)
 	go func() {
-		defer close(errC)
 		// If the context gets cancelled (unlikely), this routine will leak
 		// until the Close() call actually returns.
 		// We don't really care.
+		defer close(errC)
 		if err := s.pool.Close(); err != nil {
 			errC <- err
 			return
@@ -184,7 +190,7 @@ func (s *Service) Stop(ctx context.Context) error {
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
-// NOTE: This will panic if `s` is not a `kafka.Service`.
+// NOTE: This will panic if `s` is not a `redis.Service`.
 func Client(s bandmaster.Service) *redis.Pool {
 	return s.(*Service).pool // allowed to panic
 }

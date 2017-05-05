@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 )
@@ -31,16 +32,24 @@ func TestService_Redis(t *testing.T) {
 	s := New(conf)
 	assert.NotNil(t, s)
 
+	m := bandmaster.NewMaestro()
+	m.AddService("A", true, s)
+
 	ctx, canceller := context.WithCancel(context.Background())
 	canceller()
-	err := s.Start(ctx, nil)
+	err := errors.Cause(<-m.StartAll(ctx))
+	errExpected := &bandmaster.Error{
+		Kind:       bandmaster.ErrServiceStartFailure,
+		Service:    s,
+		ServiceErr: context.Canceled,
+	}
 	assert.NotNil(t, err)
-	assert.Equal(t, context.Canceled, err)
+	assert.Equal(t, errExpected, err)
 
-	err = s.Start(context.Background(), nil)
+	err = errors.Cause(<-m.StartAll(ctx))
 	assert.Nil(t, err)
 	/* idempotency */
-	err = s.Start(context.Background(), nil)
+	err = errors.Cause(<-m.StartAll(ctx))
 	assert.Nil(t, err)
 
 	var bs bandmaster.Service = s
@@ -52,14 +61,26 @@ func TestService_Redis(t *testing.T) {
 	_, err = conn.Do("PING")
 	assert.Nil(t, err)
 
-	err = s.Stop(context.Background())
+	err = <-m.StopAll(context.Background())
 	assert.Nil(t, err)
 	/* idempotency */
-	err = s.Stop(context.Background())
+	err = <-m.StopAll(context.Background())
 	assert.Nil(t, err)
 
 	ctx, canceller = context.WithCancel(context.Background())
 	canceller()
-	err = s.Stop(ctx)
-	assert.Equal(t, context.Canceled, err)
+	err = errors.Cause(<-m.StopAll(context.Background()))
+	errExpected = &bandmaster.Error{
+		Kind:       bandmaster.ErrServiceStopFailure,
+		Service:    s,
+		ServiceErr: context.Canceled,
+	}
+	assert.NotNil(t, err)
+	assert.Equal(t, errExpected, err)
+
+	/* restart support */
+	err = <-m.StartAll(ctx)
+	assert.Nil(t, err)
+	err = <-m.StopAll(context.Background())
+	assert.Nil(t, err)
 }
