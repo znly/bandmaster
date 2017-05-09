@@ -15,12 +15,11 @@
 package redis
 
 import (
-	"context"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
+	"github.com/znly/bandmaster/services"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,58 +28,15 @@ func TestService_Redis(t *testing.T) {
 	conf := DefaultConfig("redis://localhost:6379/0")
 	assert.NotNil(t, conf)
 
-	s := New(conf)
-	assert.NotNil(t, s)
-
-	m := bandmaster.NewMaestro()
-	m.AddService("A", true, s)
-
-	ctx, canceller := context.WithCancel(context.Background())
-	canceller()
-	err := errors.Cause(<-m.StartAll(ctx))
-	errExpected := &bandmaster.Error{
-		Kind:       bandmaster.ErrServiceStartFailure,
-		Service:    s,
-		ServiceErr: context.Canceled,
-	}
-	assert.NotNil(t, err)
-	assert.Equal(t, errExpected, err)
-
-	err = errors.Cause(<-m.StartAll(ctx))
-	assert.Nil(t, err)
-	/* idempotency */
-	err = errors.Cause(<-m.StartAll(ctx))
-	assert.Nil(t, err)
-
-	var bs bandmaster.Service = s
-	c := Client(bs)
-	assert.NotNil(t, c)
-	conn := c.Get()
-	assert.NotNil(t, conn)
-	defer conn.Close()
-	_, err = conn.Do("PING")
-	assert.Nil(t, err)
-
-	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
-	/* idempotency */
-	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
-
-	ctx, canceller = context.WithCancel(context.Background())
-	canceller()
-	err = errors.Cause(<-m.StopAll(context.Background()))
-	errExpected = &bandmaster.Error{
-		Kind:       bandmaster.ErrServiceStopFailure,
-		Service:    s,
-		ServiceErr: context.Canceled,
-	}
-	assert.NotNil(t, err)
-	assert.Equal(t, errExpected, err)
-
-	/* restart support */
-	err = <-m.StartAll(ctx)
-	assert.Nil(t, err)
-	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
+	services.TestService_Generic(t, New(conf),
+		func(t *testing.T, s bandmaster.Service) {
+			c := Client(s)
+			assert.NotNil(t, c)
+			conn := c.Get()
+			assert.NotNil(t, conn)
+			defer conn.Close()
+			_, err := conn.Do("PING")
+			assert.Nil(t, err)
+		},
+	)
 }
