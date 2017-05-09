@@ -83,74 +83,34 @@ func New(opts *nats.Options) bandmaster.Service {
 // Start opens a connection and PINGs the server: if everything goes smoothly,
 // the service is marked as 'started'; otherwise, an error is returned.
 //
-// The given context defines the deadline for the above-mentionned operations.
 //
-//
-// NOTE1: Start is used by BandMaster's internal machinery, it shouldn't ever
-// have to be called by the end-user of the service.
-//
-// NOTE2: Start relies on the Maestro holding the service's base lock.
-func (s *Service) Start(
-	ctx context.Context, _ map[string]bandmaster.Service,
-) error {
-	errC := make(chan error, 1)
-	go func() {
-		defer close(errC)
-		var err error
-		if s.c == nil { // idempotency
-			s.c, err = s.opts.Connect()
-			if err != nil {
-				errC <- err
-				return
-			}
-		}
-		if s.c.Status() != nats.CONNECTED {
-			errC <- errors.New("nats: connection failure") // TODO(cmc): typed error
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errC:
+// Start is used by BandMaster's internal machinery, it shouldn't ever be called
+// directly by the end-user of the service.
+func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
+	var err error
+	if s.c == nil { // idempotency
+		s.c, err = s.opts.Connect()
 		if err != nil {
 			return err
 		}
 	}
-
+	if s.c.Status() != nats.CONNECTED {
+		return errors.New("nats: connection failure") // TODO(cmc): typed error
+	}
 	return nil
 }
 
 // Stop closes the underlying `nats.Conn`: if everything goes smoothly,
 // the service is marked as 'stopped'; otherwise, an error is returned.
 //
-// The given context defines the deadline for the above-mentionned operations.
 //
-//
-// NOTE1: Stop is used by BandMaster's internal machinery, it shouldn't ever
-// have to be called by the end-user of the service.
-//
-// NOTE2: Stop relies on the Maestro holding the service's base lock.
+// Stop is used by BandMaster's internal machinery, it shouldn't ever be called
+// directly by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
-	errC := make(chan error, 1)
-	go func() {
-		// If the context gets cancelled (unlikely), this routine will leak
-		// until the Close() call actually returns.
-		// We don't really care.
-		defer close(errC)
-		if s.c != nil {
-			s.c.Close()
-			s.c = nil // idempotency & restart support
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errC:
-		if err != nil {
-			return err
-		}
+	if s.c != nil {
+		s.c.Close()
+		s.c = nil // idempotency & restart support
 	}
-
 	return nil
 }
 
