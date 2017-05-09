@@ -211,7 +211,17 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 		)
 	}
 
-	err := s.Start(ctx, deps)
+	/* -- Start the actual service `s` -- */
+	base.lock.Lock()
+	var err error
+	errC := make(chan error, 1)
+	go func() { errC <- s.Start(ctx, deps); close(errC) }()
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case err = <-errC:
+	}
+	base.lock.Unlock()
 	retries, ib := base.RetryConf()
 	attempts := uint(0)
 	for err != nil {
@@ -237,8 +247,14 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 			time.Sleep(ib)
 			ib *= 2
 		}
-		base.lock.Lock() // TODO(cmc): test this somehow
-		err = s.Start(ctx, deps)
+		base.lock.Lock()
+		errC := make(chan error, 1)
+		go func() { errC <- s.Start(ctx, deps); close(errC) }()
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+		case err = <-errC:
+		}
 		base.lock.Unlock()
 	}
 	base.started <- nil // don't close this channel, ever
@@ -319,8 +335,15 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 		}
 	}
 
-	base.lock.Lock() // TODO(cmc): test this somehow
-	err := s.Stop(ctx)
+	base.lock.Lock()
+	var err error
+	errC := make(chan error, 1)
+	go func() { errC <- s.Stop(ctx); close(errC) }()
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case err = <-errC:
+	}
 	base.lock.Unlock()
 	if err != nil {
 		zap.L().Info("service failed to stop",
