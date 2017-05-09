@@ -15,13 +15,12 @@
 package kafka
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Shopify/sarama"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
+	"github.com/znly/bandmaster/services"
 )
 
 // -----------------------------------------------------------------------------
@@ -29,54 +28,16 @@ import (
 func TestService_Kafka(t *testing.T) {
 	conf := DefaultConfig(128, sarama.V0_10_1_0)
 	assert.NotNil(t, conf)
-
 	s := New(conf, []string{"localhost:9092"}, []string{"test"}, "cg")
-	assert.NotNil(t, s)
 
-	m := bandmaster.NewMaestro()
-	m.AddService("A", true, s)
-
-	ctx, canceller := context.WithCancel(context.Background())
-	canceller()
-	err := errors.Cause(<-m.StartAll(ctx))
-	errExpected := &bandmaster.Error{
-		Kind:       bandmaster.ErrServiceStartFailure,
-		Service:    s,
-		ServiceErr: context.Canceled,
-	}
-	assert.NotNil(t, err)
-	assert.Equal(t, errExpected, err)
-
-	err = errors.Cause(<-m.StartAll(ctx))
-	assert.Nil(t, err)
-	/* idempotency */
-	err = errors.Cause(<-m.StartAll(ctx))
-	assert.Nil(t, err)
-
-	var bs bandmaster.Service = s
-	c := Consumer(bs)
-	assert.NotNil(t, c)
-	assert.NotNil(t, c.Messages())
-	p := Producer(bs)
-	assert.NotNil(t, p)
-	assert.NotNil(t, p.Input())
-
-	return
-
-	err = s.Stop(context.Background())
-	assert.Nil(t, err)
-	/* idempotency */
-	err = s.Stop(context.Background())
-	assert.Nil(t, err)
-
-	ctx, canceller = context.WithCancel(context.Background())
-	canceller()
-	err = s.Stop(ctx)
-	assert.Equal(t, context.Canceled, err)
-
-	/* restart support */
-	err = errors.Cause(<-m.StartAll(ctx))
-	assert.Nil(t, err)
-	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
+	services.TestService_Generic(t, s,
+		func(t *testing.T, s bandmaster.Service) {
+			c := Consumer(s)
+			assert.NotNil(t, c)
+			assert.NotNil(t, c.Messages())
+			p := Producer(s)
+			assert.NotNil(t, p)
+			assert.NotNil(t, p.Input())
+		},
+	)
 }
