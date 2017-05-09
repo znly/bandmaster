@@ -114,8 +114,6 @@ func New(p *redis.Pool) bandmaster.Service {
 // Start opens a connection and PINGs the server: if everything goes smoothly,
 // the service is marked as 'started'; otherwise, an error is returned.
 //
-// The given context defines the deadline for the above-mentionned operations.
-//
 //
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
@@ -133,6 +131,7 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 }
 
 // Stop does nothing.
+//
 //
 // Stop is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
