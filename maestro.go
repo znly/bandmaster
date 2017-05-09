@@ -85,6 +85,9 @@ func (m *Maestro) AddServiceWithBackoff(
 	}
 
 	base := serviceBase(s)
+	// This method is the only legal path one can take in order to add a service
+	// to the Maestro, we thus consider this check to be always true further down
+	// chain.
 	if base == nil { // panic if `s` doesn't inherit properly
 		panic(&Error{Kind: ErrServiceWithoutBase, ServiceName: name})
 	}
@@ -144,6 +147,7 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	wg := &sync.WaitGroup{}
 	wg.Add(len(m.services))
 	for _, s := range m.services {
+		// NOTE: The Maestro's lock is kept during execution of these routines.
 		go func(ss Service) { // services are started in parallel
 			defer wg.Done()
 			err := m.start(ctx, ss)
@@ -160,11 +164,28 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 // TODO(cmc)
 // EXPECTS LOCK
 func (m *Maestro) start(ctx context.Context, s Service) error {
+	base := serviceBase(s)
+
+	/* -- Handling restarts & idempotency, canceled contexts, etc... -- */
+	select {
+	case err := <-base.started: // raw access to started state
+		if err == nil {
+			base.started <- err
+			return nil // idempotency
+		}
+	case <-ctx.Done():
+		return &Error{
+			Kind:       ErrServiceStartFailure,
+			Service:    s,
+			ServiceErr: ctx.Err(),
+		}
+	default: // go on
+	}
+
 	name := s.Name()
 	zap.L().Info("starting service...", zap.String("service", name))
 
-	base := serviceBase(s)
-
+	/* -- Wait for `s`' dependencies to be ready -- */
 	deps := make(map[string]Service, len(base.Dependencies()))
 	for dep := range base.Dependencies() {
 		zap.L().Debug("waiting for dependency to start",
@@ -220,9 +241,10 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 		err = s.Start(ctx, deps)
 		base.lock.Unlock()
 	}
-	select {
-	case base.started <- nil: // don't close this channel, ever
-	default: // idempotency
+	base.started <- nil // don't close this channel, ever
+	select {            // successful start -> flush stopped state
+	case <-base.stopped:
+	default:
 	}
 
 	zap.L().Info("service successfully started", zap.String("service", s.String()))
@@ -237,12 +259,13 @@ func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	errC := make(chan error, len(m.services)+1)
+	errC := make(chan error, len(m.services)+1) // +1 because I don't like surprises
 	defer close(errC)
 
 	wg := &sync.WaitGroup{}
 	wg.Add(len(m.services))
 	for _, s := range m.services {
+		// NOTE: The Maestro's lock is kept during execution of these routines.
 		go func(ss Service) { // services are stopped in parallel
 			defer wg.Done()
 			err := m.stop(ctx, ss)
@@ -259,10 +282,26 @@ func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 // TODO(cmc)
 // EXPECTS LOCK
 func (m *Maestro) stop(ctx context.Context, s Service) error {
+	base := serviceBase(s)
+
+	/* -- Handling restarts & idempotency, canceled contexts, etc... -- */
+	select {
+	case err := <-base.stopped: // raw access to stopped state
+		if err == nil {
+			base.stopped <- err
+			return nil // idempotency
+		}
+	case <-ctx.Done():
+		return &Error{
+			Kind:       ErrServiceStopFailure,
+			Service:    s,
+			ServiceErr: ctx.Err(),
+		}
+	default: // go on
+	}
+
 	name := s.Name()
 	zap.L().Info("stopping service...", zap.String("service", name))
-
-	base := serviceBase(s)
 
 	for dep := range base.Dependencies() {
 		zap.L().Debug("waiting for dependency to stop",
@@ -295,9 +334,10 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 		base.stopped <- err
 		return err
 	}
-	select {
-	case base.stopped <- nil: // don't close this channel, ever
-	default: // idempotency
+	base.stopped <- nil // don't close this channel, ever
+	select {            // successful stop -> flush started state
+	case <-base.started:
+	default:
 	}
 
 	zap.L().Info("service successfully stopped", zap.String("service", s.String()))
