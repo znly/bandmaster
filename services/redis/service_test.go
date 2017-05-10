@@ -36,7 +36,7 @@ func TestService_Redis(t *testing.T) {
 			assert.NotNil(t, conn)
 			defer conn.Close()
 			_, err := conn.Do("PING")
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 		},
 	)
 }

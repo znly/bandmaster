@@ -42,18 +42,18 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 		ServiceErr: context.Canceled,
 	}
 	err := errors.Cause(<-m.StartAll(ctx))
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StartAll(ctx))
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 
 	err = errors.Cause(<-m.StartAll(context.Background()))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	/* idempotency (success) */
 	err = errors.Cause(<-m.StartAll(context.Background()))
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	if specifics != nil {
 		specifics(t, s)
@@ -67,26 +67,26 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 		ServiceErr: context.Canceled,
 	}
 	err = errors.Cause(<-m.StopAll(ctx))
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StopAll(ctx))
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 
 	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	/* idempotency (success) */
 	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	/* restart support */
 	err = <-m.StartAll(context.Background())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	if specifics != nil {
 		specifics(t, s)
 		return
 	}
 	err = <-m.StopAll(context.Background())
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
