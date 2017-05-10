@@ -21,3 +21,15 @@ services:
             - "ADVERTISED_HOST=localhost"
             - "ADVERTISED_PORT=9092"
         restart: on-failure
+
+    cql:
+        image: cassandra:3
+        ports:
+            - "9042:9042"
+        restart: on-failure
+
+    memcached:
+        image: memcached:1.4
+        ports:
+            - "11211:11211"
+        restart: on-failure
