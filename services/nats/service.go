@@ -93,9 +93,10 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 		if err != nil {
 			return err
 		}
-	}
-	if s.c.Status() != nats.CONNECTED {
-		return errors.New("nats: connection failure") // TODO(cmc): typed error
+		if s.c.Status() != nats.CONNECTED {
+			_ = s.Stop(context.Background())
+			return errors.New("nats: connection failure") // TODO(cmc): typed error
+		}
 	}
 	return nil
 }
@@ -121,7 +122,14 @@ func (s *Service) Stop(ctx context.Context) error {
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
-// NOTE: This will panic if `s` is not a `kafka.Service`.
+// NOTE: This will panic if `s` is not a `nats.Service`.
 func Client(s bandmaster.Service) *nats.Conn {
 	return s.(*Service).c // allowed to panic
+}
+
+// Config returns the underlying `nats.Options` of the given service.
+//
+// NOTE: This will panic if `s` is not a `nats.Service`.
+func Config(s bandmaster.Service) *nats.Options {
+	return s.(*Service).opts // allowed to panic
 }

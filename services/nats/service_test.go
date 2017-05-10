@@ -34,6 +34,9 @@ func TestService_NATS(t *testing.T) {
 			c := Client(s)
 			assert.NotNil(t, c)
 			assert.Equal(t, nats.CONNECTED, c.Status())
+			cc := Config(s)
+			assert.NotNil(t, cc)
+			assert.Equal(t, conf, cc)
 		},
 	)
 }
