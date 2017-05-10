@@ -38,6 +38,9 @@ func TestService_Kafka(t *testing.T) {
 			p := Producer(s)
 			assert.NotNil(t, p)
 			assert.NotNil(t, p.Input())
+			cc := Config(s)
+			assert.NotNil(t, c)
+			assert.Equal(t, conf, cc)
 		},
 	)
 }

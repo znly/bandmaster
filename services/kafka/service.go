@@ -348,3 +348,10 @@ func Consumer(s bandmaster.Service) *sarama_cluster.Consumer {
 func Producer(s bandmaster.Service) sarama.AsyncProducer {
 	return s.(*Service).p // allowed to panic
 }
+
+// Config returns the underlying configuration of the given service.
+//
+// NOTE: This will panic if `s` is not a `kafka.Service`.
+func Config(s bandmaster.Service) *sarama_cluster.Config {
+	return s.(*Service).conf // allowed to panic
+}
