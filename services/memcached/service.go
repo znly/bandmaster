@@ -16,7 +16,6 @@ package memcached
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/rainycape/memcache"
@@ -25,7 +24,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// Service implements a Memcached service based on the 'nats-io/nats' package.
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
@@ -35,12 +34,16 @@ type Service struct {
 	c *memcache.Client
 }
 
-// TODO(cmc)
-func DefaultConfig() (time.Duration, string) {
-	return time.Second, "localhost:11211"
+// DefaultConfig returns a default timeout of 1 second.
+func DefaultConfig(addr string) (time.Duration, string) {
+	return time.Second, addr
 }
 
-// TODO(cmc)
+// New creates a new service using the provided parameters.
+// Use `DefaultConfig` to get a pre-configured pair of input parameters.
+//
+// It doesn't open any connection nor does it do any kind of I/O; i.e. it
+// cannot fail.
 func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
@@ -51,63 +54,53 @@ func New(timeout time.Duration, addrs ...string) bandmaster.Service {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
-func (s *Service) Start(
-	ctx context.Context, deps map[string]bandmaster.Service,
-) error {
-	c, err := memcache.New(s.addrs...)
-	if err != nil {
-		return err
-	}
-	c.SetTimeout(s.timeout)
+// Start opens a connection and PINGs the server: if everything goes smoothly,
+// the service is marked as 'started'; otherwise, an error is returned.
+//
+//
+// Start is used by BandMaster's internal machinery, it shouldn't ever be called
+// directly by the end-user of the service.
+func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 
-	errC := make(chan error, 1)
-	go func() {
-		if _, err := c.Get("random_key"); err != memcache.ErrCacheMiss {
-			_ = c.Close()
-			errC <- err
-		}
-		close(errC)
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errC:
+	var err error
+	if s.c == nil { // idempotency
+		s.c, err = memcache.New(s.addrs...)
 		if err != nil {
 			return err
 		}
+		s.c.SetTimeout(s.timeout)
+		if _, err := s.c.Get("random_key"); err != memcache.ErrCacheMiss {
+			_ = s.Stop(context.Background())
+			return err
+		}
 	}
-
-	s.c = c
 	return nil
 }
 
-// TODO(cmc)
+// Stop closes the underlying `memcache.Client`: if everything goes smoothly,
+// the service is marked as 'stopped'; otherwise, an error is returned.
+//
+//
+// Stop is used by BandMaster's internal machinery, it shouldn't ever be called
+// directly by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
-	errC := make(chan error, 1)
-	go func() {
-		defer close(errC)
+	if s.c != nil {
 		if err := s.c.Close(); err != nil {
-			errC <- err
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errC:
-		if err != nil {
 			return err
 		}
+		s.c = nil // idempotency & restart support
 	}
 	return nil
-}
-
-// TODO(cmc)
-func (s *Service) String() string {
-	return s.ServiceBase.String() + fmt.Sprintf(" @ %v", s.addrs)
 }
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
-func Client(s Service) *memcache.Client { return s.c }
+// Client returns the underlying `memcache.Client` of the given service.
+//
+// It assumes that the service is ready; i.e. it might return nil if it's
+// actually not.
+//
+// NOTE: This will panic if `s` is not a `nats.Service`.
+func Client(s bandmaster.Service) *memcache.Client {
+	return s.(*Service).c // allowed to panic
+}
