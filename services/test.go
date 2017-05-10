@@ -17,6 +17,7 @@ package services
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	assert.NotNil(t, s)
 
 	m := bandmaster.NewMaestro()
-	m.AddService("A", true, s)
+	m.AddServiceWithBackoff("A", true, 10, time.Millisecond*200, s)
 
 	ctx, canceller := context.WithCancel(context.Background())
 	canceller()
