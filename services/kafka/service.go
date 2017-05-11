@@ -293,12 +293,17 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 					if !ok {
 						return
 					}
-					zap.L().Error(err.Error(),
-						zap.String("topic", err.Msg.Topic),
-						zap.Int32("partition", err.Msg.Partition),
-						zap.Int64("offset", err.Msg.Offset),
-						zap.String("key", fmt.Sprintf("%v", err.Msg.Key)),
-					)
+					// TODO(cmc): explain error handling idiom
+					if errC, ok := err.Msg.Metadata.(chan<- error); ok {
+						errC <- err.Err
+					} else {
+						zap.L().Error(err.Error(),
+							zap.String("topic", err.Msg.Topic),
+							zap.Int32("partition", err.Msg.Partition),
+							zap.Int64("offset", err.Msg.Offset),
+							zap.String("key", fmt.Sprintf("%v", err.Msg.Key)),
+						)
+					}
 				}
 			}
 		}()
@@ -313,12 +318,17 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 					if !ok {
 						return
 					}
-					zap.L().Debug("message pushed",
-						zap.String("topic", msg.Topic),
-						zap.Int32("partition", msg.Partition),
-						zap.Int64("offset", msg.Offset),
-						zap.String("key", fmt.Sprintf("%v", msg.Key)),
-					)
+					// TODO(cmc): explain error handling idiom
+					if errC, ok := msg.Metadata.(chan<- error); ok {
+						close(errC)
+					} else {
+						zap.L().Debug("message pushed",
+							zap.String("topic", msg.Topic),
+							zap.Int32("partition", msg.Partition),
+							zap.Int64("offset", msg.Offset),
+							zap.String("key", fmt.Sprintf("%v", msg.Key)),
+						)
+					}
 				}
 			}
 		}()
