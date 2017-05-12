@@ -39,7 +39,26 @@ func TestService_Kafka(t *testing.T) {
 			assert.NotNil(t, p)
 			assert.NotNil(t, p.Input())
 			cc := Config(s)
-			assert.NotNil(t, c)
+			assert.NotNil(t, cc)
+			assert.Equal(t, conf, cc)
+		},
+	)
+}
+
+func TestService_Kafka_ProducerOnly(t *testing.T) {
+	conf := DefaultConfig(128, sarama.V0_10_1_0)
+	assert.NotNil(t, conf)
+	s := New(conf, []string{"localhost:9092"}, nil, "")
+
+	services.TestService_Generic(t, s,
+		func(t *testing.T, s bandmaster.Service) {
+			c := Consumer(s)
+			assert.Nil(t, c)
+			p := Producer(s)
+			assert.NotNil(t, p)
+			assert.NotNil(t, p.Input())
+			cc := Config(s)
+			assert.NotNil(t, cc)
 			assert.Equal(t, conf, cc)
 		},
 	)

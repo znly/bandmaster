@@ -114,6 +114,9 @@ func DefaultConfig(
 //
 // New doesn't open any connection, doesn't do any kind of I/O, nor does it
 // check the validity of the passed configuration; i.e. it cannot fail.
+//
+// Both `consumerTopics` & `consumerGroupID` are optional: if one of them is not
+// specified, no consumer will be created during initialization.
 func New(conf *sarama_cluster.Config,
 	addrs []string, consumerTopics []string, consumerGroupID string,
 ) bandmaster.Service {
@@ -131,8 +134,6 @@ func New(conf *sarama_cluster.Config,
 	}
 }
 
-// TODO(cmc): NewConsumerOnly, NewProducerOnly
-
 // -----------------------------------------------------------------------------
 
 // Start checks the validity of the configuration then creates a new Kafka
@@ -148,11 +149,13 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 		return err
 	}
 	if s.c == nil { // idempotency
-		s.c, err = sarama_cluster.NewConsumer(
-			s.addrs, s.consumerGroupID, s.consumerTopics, s.conf,
-		)
-		if err != nil {
-			return err
+		if len(s.consumerGroupID) > 0 && len(s.consumerTopics) > 0 {
+			s.c, err = sarama_cluster.NewConsumer(
+				s.addrs, s.consumerGroupID, s.consumerTopics, s.conf,
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if s.p == nil { // idempotency
