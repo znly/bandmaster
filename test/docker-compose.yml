@@ -33,3 +33,9 @@ services:
         ports:
             - "11211:11211"
         restart: on-failure
+
+    es:
+        image: elasticsearch:2.4.5
+        ports:
+            - "9200:9200"
+        restart: on-failure
