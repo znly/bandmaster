@@ -16,7 +16,6 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -118,7 +117,6 @@ func New(p *redis.Pool) bandmaster.Service {
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
 func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
-	fmt.Println("actual start")
 	c, err := s.pool.Dial()
 	if err != nil {
 		return err
