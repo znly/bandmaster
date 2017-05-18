@@ -16,10 +16,8 @@ package es
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
-	elastic "gopkg.in/olivere/elastic.v2"
+	elastic "gopkg.in/olivere/elastic.v3"
 
 	"github.com/znly/bandmaster"
 )
@@ -30,6 +28,7 @@ import (
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
+	addr string
 	opts []elastic.ClientOptionFunc
 
 	c *elastic.Client
@@ -39,9 +38,11 @@ type Service struct {
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(opts ...elastic.ClientOptionFunc) bandmaster.Service {
+func New(addr string, opts ...elastic.ClientOptionFunc) bandmaster.Service {
+	opts = append(opts, elastic.SetURL(addr))
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
+		addr:        addr,
 		opts:        opts,
 	}
 }
@@ -63,14 +64,10 @@ func (s *Service) Start(
 		if err != nil {
 			return err
 		}
-		pr, _, err := s.c.Ping().Timeout("3s").Do()
+		_, _, err := s.c.Ping(s.addr).Timeout("1s").Do()
 		if err != nil {
 			_ = s.Stop(context.Background())
 			return err
-		}
-		if pr.Status != 0 {
-			_ = s.Stop(context.Background())
-			return errors.New(fmt.Sprintf("not ready, status: %d", pr.Status))
 		}
 	}
 	return nil
