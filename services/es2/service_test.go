@@ -28,7 +28,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-func TestService_ES(t *testing.T) {
+func TestService_ES2(t *testing.T) {
 	l, _ := zap.NewDevelopment()
 	zap.ReplaceGlobals(l)
 
