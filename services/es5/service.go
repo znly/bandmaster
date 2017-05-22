@@ -24,26 +24,33 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Service implements a ES service based on the 'olivere/elastic.v2' package.
+// Service implements a ES service based on the 'olivere/elastic.v5' package.
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
-	addr string
-	opts []elastic.ClientOptionFunc
+	conf Config
 
 	c *elastic.Client
 }
+
+// Config contains the necessary configuration for an ElasticSearch (v5) service.
+type Config struct {
+	Addr string
+	Opts []elastic.ClientOptionFunc
+}
+
+// DefaultConfig returns a `Config` with no elastic options.
+func DefaultConfig(addr string) Config { return Config{Addr: addr} }
 
 // New creates a new service using the provided elastic options.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(addr string, opts ...elastic.ClientOptionFunc) bandmaster.Service {
-	opts = append(opts, elastic.SetURL(addr))
+func New(conf Config) bandmaster.Service {
+	conf.Opts = append(conf.Opts, elastic.SetURL(conf.Addr))
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
-		addr:        addr,
-		opts:        opts,
+		conf:        conf,
 	}
 }
 
@@ -61,11 +68,11 @@ func (s *Service) Start(
 ) error {
 	var err error
 	if s.c == nil {
-		s.c, err = elastic.NewClient(s.opts...)
+		s.c, err = elastic.NewClient(s.conf.Opts...)
 		if err != nil {
 			return err
 		}
-		_, _, err := s.c.Ping(s.addr).Do(ctx)
+		_, _, err := s.c.Ping(s.conf.Addr).Do(ctx)
 		if err != nil {
 			_ = s.Stop(context.Background())
 			return err

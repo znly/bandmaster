@@ -35,6 +35,7 @@ type Service struct {
 	c *memcache.Client
 }
 
+// Config contains the necessary configuration for a Memcached service.
 type Config struct {
 	Addrs     []string
 	RWTimeout time.Duration

@@ -17,8 +17,6 @@ package es
 import (
 	"testing"
 
-	"go.uber.org/zap"
-
 	elastic "gopkg.in/olivere/elastic.v5"
 
 	"github.com/stretchr/testify/assert"
@@ -29,11 +27,9 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_ES5(t *testing.T) {
-	l, _ := zap.NewDevelopment()
-	zap.ReplaceGlobals(l)
-
-	opts := []elastic.ClientOptionFunc{elastic.SetSniff(false)}
-	services.TestService_Generic(t, New("http://localhost:9205", opts...),
+	conf := DefaultConfig("http://localhost:9202")
+	conf.Opts = []elastic.ClientOptionFunc{elastic.SetSniff(false)}
+	services.TestService_Generic(t, New(conf),
 		func(t *testing.T, s bandmaster.Service) {
 			c := Client(s)
 			assert.NotNil(t, c)

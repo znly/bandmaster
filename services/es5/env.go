@@ -26,7 +26,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Env can be used to configure an ElasticSearch (v2) session via the
+// Env can be used to configure an ElasticSearch (v5) session via the
 // environment.
 //
 // It comes with sane default for a local development set-up.
@@ -46,7 +46,7 @@ func NewEnv(prefix string) (*Env, error) {
 	return e, nil
 }
 
-// Config returns an ElasticSearch (v2) config using the values from the
+// Config returns an ElasticSearch (v5) config using the values from the
 // environment.
 func (e *Env) Config() Config { return Config{Addr: e.Addr} }
 
