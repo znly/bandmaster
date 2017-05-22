@@ -17,95 +17,11 @@ package kafka
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Shopify/sarama"
-	"github.com/pkg/errors"
 	"github.com/znly/bandmaster"
 	"go.uber.org/zap"
 )
-
-// -----------------------------------------------------------------------------
-
-// TODO(cmc)
-type SaramaKafkaVersionDecoder sarama.KafkaVersion
-
-func (skvd *SaramaKafkaVersionDecoder) Decode(v string) error {
-	switch strings.ToUpper(v) {
-	case "V0_8_2_0":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_8_2_0)
-	case "V0_8_2_1":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_8_2_1)
-	case "V0_8_2_2":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_8_2_2)
-	case "V0_9_0_0":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_9_0_0)
-	case "V0_9_0_1":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_9_0_1)
-	case "V0_10_0_0":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_10_0_0)
-	case "V0_10_0_1":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_10_0_1)
-	case "V0_10_1_0":
-		*skvd = SaramaKafkaVersionDecoder(sarama.V0_10_1_0)
-	default:
-		return errors.Errorf("`%s`: unsupported version", v)
-	}
-	return nil
-}
-func (skvd SaramaKafkaVersionDecoder) String() string {
-	switch sarama.KafkaVersion(skvd) {
-	case sarama.V0_8_2_0:
-		return "V0_8_2_0"
-	case sarama.V0_8_2_1:
-		return "V0_8_2_1"
-	case sarama.V0_8_2_2:
-		return "V0_8_2_2"
-	case sarama.V0_9_0_0:
-		return "V0_9_0_0"
-	case sarama.V0_9_0_1:
-		return "V0_9_0_1"
-	case sarama.V0_10_0_0:
-		return "V0_10_0_0"
-	case sarama.V0_10_0_1:
-		return "V0_10_0_1"
-	case sarama.V0_10_1_0:
-		return "V0_10_1_0"
-	}
-	return "Unknown"
-}
-
-// TODO(cmc)
-type SaramaCompressionCodecDecoder sarama.CompressionCodec
-
-func (sccd *SaramaCompressionCodecDecoder) Decode(v string) error {
-	switch strings.ToLower(v) {
-	case "none":
-		*sccd = SaramaCompressionCodecDecoder(sarama.CompressionNone)
-	case "snappy":
-		*sccd = SaramaCompressionCodecDecoder(sarama.CompressionSnappy)
-	case "lz4":
-		*sccd = SaramaCompressionCodecDecoder(sarama.CompressionLZ4)
-	case "gzip":
-		*sccd = SaramaCompressionCodecDecoder(sarama.CompressionGZIP)
-	default:
-		return errors.Errorf("`%s`: unsupported compression codec", v)
-	}
-	return nil
-}
-func (sccd SaramaCompressionCodecDecoder) String() string {
-	switch sarama.CompressionCodec(sccd) {
-	case sarama.CompressionNone:
-		return "none"
-	case sarama.CompressionSnappy:
-		return "snappy"
-	case sarama.CompressionLZ4:
-		return "lz4"
-	case sarama.CompressionGZIP:
-		return "gzip"
-	}
-	return "Unknown"
-}
 
 // -----------------------------------------------------------------------------
 

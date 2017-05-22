@@ -28,20 +28,6 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Consistency is used to configure gocql's consistency value via the
-// environment.
-type Consistency gocql.Consistency
-
-func (gcd *Consistency) Decode(c string) error {
-	*gcd = Consistency(gocql.ParseConsistency(c))
-	return nil
-}
-func (gcd Consistency) String() string {
-	return (gocql.Consistency(gcd)).String()
-}
-
-// -----------------------------------------------------------------------------
-
 // Env can be used to configure a gocql session via the environment.
 //
 // It comes with sane default for a local development set-up.
@@ -106,4 +92,18 @@ func (e *Env) String() string {
 		}
 	}
 	return strings.Join(fieldStrs, "\n") + "\n"
+}
+
+// -----------------------------------------------------------------------------
+
+// Consistency is used to configure gocql's consistency value via the
+// environment.
+type Consistency gocql.Consistency
+
+func (gcd *Consistency) Decode(c string) error {
+	*gcd = Consistency(gocql.ParseConsistency(c))
+	return nil
+}
+func (gcd Consistency) String() string {
+	return (gocql.Consistency(gcd)).String()
 }

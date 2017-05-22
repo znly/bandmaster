@@ -88,6 +88,9 @@ func DefaultConfig(
 	// If enabled, messages that failed to deliver will be returned on the
 	// Errors channel, including error.
 	config.Producer.Return.Errors = true
+	// The type of compression to use on messages (defaults to no compression).
+	// Similar to `compression.codec` setting of the JVM producer.
+	config.Producer.Compression = sarama.CompressionNone
 
 	/* COMMON */
 
@@ -108,13 +111,14 @@ func DefaultConfig(
 }
 
 // New creates a new service using the provided Kafka cluster configuration.
-// Use `DefaultConfig` to get a pre-configured configuration.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `sarama_cluster.Config`.
 //
 // New doesn't open any connection, doesn't do any kind of I/O, nor does it
 // check the validity of the passed configuration; i.e. it cannot fail.
 //
-// Both `consumerTopics` & `consumerGroupID` are optional: if one of them is not
-// specified, no consumer will be created during initialization.
+// Both `consumerTopics` & `consumerGroupID` are optional: if one of them
+// is not specified, no consumer will be created during initialization.
 func New(conf *sarama_cluster.Config,
 	addrs []string, consumerTopics []string, consumerGroupID string,
 ) bandmaster.Service {
