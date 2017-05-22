@@ -97,7 +97,8 @@ func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 }
 
 // New creates a new service using the provided `redis.Pool`.
-// Use `DefaultConfig` to get a pre-configured `redis.Pool`.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `redis.Pool`.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
