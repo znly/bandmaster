@@ -25,10 +25,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Memcached(t *testing.T) {
-	timeout, addr := DefaultConfig("localhost:11211")
-	assert.Equal(t, "localhost:11211", addr)
-
-	services.TestService_Generic(t, New(timeout, addr),
+	services.TestService_Generic(t, New(DefaultConfig("localhost:11211")),
 		func(t *testing.T, s bandmaster.Service) {
 			c := Client(s)
 			assert.NotNil(t, c)

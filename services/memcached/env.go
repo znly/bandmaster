@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cql
+package memcached
 
 import (
 	"fmt"
@@ -21,24 +21,18 @@ import (
 	"time"
 
 	"github.com/fatih/camelcase"
-	"github.com/gocql/gocql"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 )
 
 // -----------------------------------------------------------------------------
 
-// Env can be used to configure a gocql session via the environment.
+// Env can be used to configure a memcached session via the environment.
 //
 // It comes with sane default for a local development set-up.
 type Env struct {
-	Consistency    Consistency   `envconfig:"CONSISTENCY" default:"LOCAL_QUORUM"`
-	ConnectTimeout time.Duration `envconfig:"CONNECT_TIMEOUT" default:"45s"`
-	Timeout        time.Duration `envconfig:"TIMEOUT" default:"30s"`
-	NbConns        uint          `envconfig:"NB_CONNS" default:"2"`
-	Addrs          []string      `envconfig:"ADDRS" default:"localhost:9042"`
-
-	TimeoutLimit uint `envconfig:"TIMEOUT_LIMIT" default:"10"`
+	Addrs     []string      `envconfig:"ADDRS" default:"localhost:11211"`
+	RWTimeout time.Duration `envconfig:"RW_TIMEOUT" default:"250ms"`
 }
 
 // NewEnv parses the environment and returns a new `Env` structure.
@@ -53,19 +47,9 @@ func NewEnv(prefix string) (*Env, error) {
 	return e, nil
 }
 
-// Config returns a `gocql.ClusterConfig` using the values from the environment.
-func (e *Env) Config() *gocql.ClusterConfig {
-	cluster := gocql.NewCluster(e.Addrs...)
-	// default consistency level
-	cluster.Consistency = gocql.Consistency(e.Consistency)
-	// initial connection timeout, used during initial dial to server
-	cluster.ConnectTimeout = e.ConnectTimeout
-	// connection timeout
-	cluster.Timeout = e.Timeout
-	// number of connections per host
-	cluster.NumConns = int(e.NbConns)
-
-	return cluster
+// Config returns a memcached config using the values from the environment.
+func (e *Env) Config() Config {
+	return Config{Addrs: e.Addrs, RWTimeout: e.RWTimeout}
 }
 
 // -----------------------------------------------------------------------------
@@ -92,18 +76,4 @@ func (e *Env) String() string {
 		}
 	}
 	return strings.Join(fieldStrs, "\n") + "\n"
-}
-
-// -----------------------------------------------------------------------------
-
-// Consistency is used to configure gocql's consistency value via the
-// environment.
-type Consistency gocql.Consistency
-
-func (gcd *Consistency) Decode(c string) error {
-	*gcd = Consistency(gocql.ParseConsistency(c))
-	return nil
-}
-func (gcd Consistency) String() string {
-	return (gocql.Consistency(gcd)).String()
 }

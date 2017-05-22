@@ -24,7 +24,8 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Service implements a Memcached service based on the 'nats-io/nats' package.
+// Service implements a Memcached service based on the 'rainycape/memcached'
+// package.
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
@@ -34,21 +35,27 @@ type Service struct {
 	c *memcache.Client
 }
 
-// DefaultConfig returns a default timeout of 1 second.
-func DefaultConfig(addr string) (time.Duration, string) {
-	return time.Second, addr
+type Config struct {
+	Addrs     []string
+	RWTimeout time.Duration
+}
+
+// DefaultConfig returns a `Config` with timeout of 1 second.
+func DefaultConfig(addrs ...string) Config {
+	return Config{Addrs: addrs, RWTimeout: time.Second}
 }
 
 // New creates a new service using the provided parameters.
-// Use `DefaultConfig` to get a pre-configured pair of input parameters.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `Config`.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(timeout time.Duration, addrs ...string) bandmaster.Service {
+func New(c Config) bandmaster.Service {
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
-		addrs:       addrs,
-		timeout:     timeout,
+		addrs:       c.Addrs,
+		timeout:     c.RWTimeout,
 	}
 }
 
