@@ -28,22 +28,31 @@ import (
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
-	addr string
-	opts []elastic.ClientOptionFunc
+	conf Config
 
 	c *elastic.Client
 }
 
-// New creates a new service using the provided elastic options.
+// Config contains the necessary configuration for an ElasticSearch (v2) service.
+type Config struct {
+	Addr string
+	Opts []elastic.ClientOptionFunc
+}
+
+// DefaultConfig returns a `Config` with no elastic options.
+func DefaultConfig(addr string) Config { return Config{Addr: addr} }
+
+// New creates a new service using the provided configuration.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `Config`.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(addr string, opts ...elastic.ClientOptionFunc) bandmaster.Service {
-	opts = append(opts, elastic.SetURL(addr))
+func New(conf Config) bandmaster.Service {
+	conf.Opts = append(conf.Opts, elastic.SetURL(conf.Addr))
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
-		addr:        addr,
-		opts:        opts,
+		conf:        conf,
 	}
 }
 
@@ -60,11 +69,11 @@ func (s *Service) Start(
 ) error {
 	var err error
 	if s.c == nil {
-		s.c, err = elastic.NewClient(s.opts...)
+		s.c, err = elastic.NewClient(s.conf.Opts...)
 		if err != nil {
 			return err
 		}
-		_, _, err := s.c.Ping(s.addr).Timeout("1s").Do()
+		_, _, err := s.c.Ping(s.conf.Addr).Timeout("1s").Do()
 		if err != nil {
 			_ = s.Stop(context.Background())
 			return err
