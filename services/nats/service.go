@@ -37,28 +37,17 @@ type Service struct {
 //   &nats.Options {
 //   	Servers:          addrs,
 //   	AllowReconnect:   true,
-//   	MaxReconnect:     DefaultMaxReconnect,
-//   	ReconnectWait:    DefaultReconnectWait,
-//   	Timeout:          DefaultTimeout,
-//   	PingInterval:     DefaultPingInterval,
-//   	MaxPingsOut:      DefaultMaxPingOut,
-//   	SubChanLen:       DefaultMaxChanLen,
-//   	ReconnectBufSize: DefaultReconnectBufSize,
+//   	MaxReconnect:     60,
+//   	ReconnectWait:    2 * time.Second,
+//   	Timeout:          2 * time.Second,
+//   	PingInterval:     2 * time.Minute,
+//   	MaxPingsOut:      2,
+//   	SubChanLen:       8192,
+//   	ReconnectBufSize: 8 * 1024 * 1024, // 8MB
 //   	Dialer: &net.Dialer{
-//   		Timeout: DefaultTimeout,
+//   		Timeout: 2 * time.Second,
 //   	},
 //   }
-//
-// With:
-//
-//   DefaultPort             = 4222
-//   DefaultMaxReconnect     = 60
-//   DefaultReconnectWait    = 2 * time.Second
-//   DefaultTimeout          = 2 * time.Second
-//   DefaultPingInterval     = 2 * time.Minute
-//   DefaultMaxPingOut       = 2
-//   DefaultMaxChanLen       = 8192            // 8k
-//   DefaultReconnectBufSize = 8 * 1024 * 1024 // 8MB
 //
 func DefaultConfig(addrs ...string) *nats.Options {
 	natsOpts := nats.DefaultOptions
@@ -67,7 +56,8 @@ func DefaultConfig(addrs ...string) *nats.Options {
 }
 
 // New creates a new service using the provided `nats.Options`.
-// Use `DefaultConfig` to get a pre-configured `nats.Options`.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `nats.Options`.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
