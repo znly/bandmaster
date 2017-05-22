@@ -50,7 +50,7 @@ func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
 	// default consistency level
 	cluster.Consistency = gocql.LocalQuorum
 	// number of connections per host
-	cluster.NumConns = 1
+	cluster.NumConns = 8
 	// initial connection timeout, used during initial dial to server
 	cluster.ConnectTimeout = time.Second * 30
 	// connection timeout
@@ -60,7 +60,8 @@ func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
 }
 
 // New creates a new service using the provided `gocql.ClusterConfig`.
-// Use `DefaultConfig` to get a pre-configured `gocql.ClusterConfig`.
+// Use `DefaultConfig()` or the helpers for environment-based configuration to
+// get a pre-configured `gocql.ClusterConfig`.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
