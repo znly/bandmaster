@@ -32,7 +32,7 @@ import (
 // It comes with sane default for a local development set-up.
 type Env struct {
 	Addrs     []string      `envconfig:"ADDRS" default:"localhost:11211"`
-	RWTimeout time.Duration `envconfig:"RW_TIMEOUT" default:"250ms"`
+	TimeoutRW time.Duration `envconfig:"TIMEOUT_RW" default:"2s"`
 }
 
 // NewEnv parses the environment and returns a new `Env` structure.
@@ -49,7 +49,7 @@ func NewEnv(prefix string) (*Env, error) {
 
 // Config returns a Memcached config using the values from the environment.
 func (e *Env) Config() Config {
-	return Config{Addrs: e.Addrs, RWTimeout: e.RWTimeout}
+	return Config{Addrs: e.Addrs, TimeoutRW: e.TimeoutRW}
 }
 
 // -----------------------------------------------------------------------------

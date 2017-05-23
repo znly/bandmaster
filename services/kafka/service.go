@@ -42,7 +42,7 @@ type Service struct {
 	p sarama.AsyncProducer
 }
 
-// DefaultConfig returns a Kafka cluster config with the following defaults:
+// DefaultConfig returns a default Kafka cluster configuration.
 //
 // This configuration stores committed offsets using the default retention time
 // configured on the server (`offsets.retention.minutes`) but doesn't commit

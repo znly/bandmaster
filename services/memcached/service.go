@@ -29,8 +29,7 @@ import (
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
-	addrs   []string
-	timeout time.Duration
+	conf Config
 
 	c *memcache.Client
 }
@@ -38,12 +37,12 @@ type Service struct {
 // Config contains the necessary configuration for a Memcached service.
 type Config struct {
 	Addrs     []string
-	RWTimeout time.Duration
+	TimeoutRW time.Duration
 }
 
-// DefaultConfig returns a `Config` with timeout of 1 second.
+// DefaultConfig returns a `Config` with timeout of 2 seconds.
 func DefaultConfig(addrs ...string) Config {
-	return Config{Addrs: addrs, RWTimeout: time.Second}
+	return Config{Addrs: addrs, TimeoutRW: time.Second}
 }
 
 // New creates a new Memcached service using the provided parameters.
@@ -55,8 +54,7 @@ func DefaultConfig(addrs ...string) Config {
 func New(c Config) bandmaster.Service {
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // inheritance
-		addrs:       c.Addrs,
-		timeout:     c.RWTimeout,
+		conf:        c,
 	}
 }
 
@@ -69,14 +67,13 @@ func New(c Config) bandmaster.Service {
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
 func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
-
 	var err error
 	if s.c == nil { // idempotency
-		s.c, err = memcache.New(s.addrs...)
+		s.c, err = memcache.New(s.conf.Addrs...)
 		if err != nil {
 			return err
 		}
-		s.c.SetTimeout(s.timeout)
+		s.c.SetTimeout(s.conf.TimeoutRW)
 		if _, err := s.c.Get("random_key"); err != memcache.ErrCacheMiss {
 			_ = s.Stop(context.Background())
 			return err

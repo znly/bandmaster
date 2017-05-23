@@ -34,8 +34,10 @@ import (
 type Env struct {
 	URI            string        `envconfig:"URI" default:"redis://locahost:6479"`
 	MaxConnsIdle   int           `envconfig:"MAX_CONNS_IDLE" default:"32"`
-	MaxConnsActive int           `envconfig:"MAX_CONNS_IDLE" default:"32"`
-	IdleTimeout    time.Duration `envconfig:"IDLE_TIMEOUT" default:"45s"`
+	MaxConnsActive int           `envconfig:"MAX_CONNS_ACTIVE" default:"32"`
+	TimeoutIdle    time.Duration `envconfig:"TIMEOUT_IDLE" default:"45s"`
+	TimeoutRead    time.Duration `envconfig:"TIMEOUT_READ" default:"2s"`
+	TimeoutWrite   time.Duration `envconfig:"TIMEOUT_WRITE" default:"2s"`
 	Wait           bool          `envconfig:"WAIT" default:"true"`
 }
 
@@ -52,7 +54,7 @@ func NewEnv(prefix string) (*Env, error) {
 }
 
 // Config returns a `redis.Pool` using the values from the environment.
-func (e *Env) Config(opts ...redis.DialOption) *redis.Pool {
+func (e *Env) Config() *redis.Pool {
 	return &redis.Pool{
 		// Maximum number of idle connections in the pool.
 		MaxIdle: e.MaxConnsIdle,
@@ -62,7 +64,7 @@ func (e *Env) Config(opts ...redis.DialOption) *redis.Pool {
 		// Close connections after remaining idle for this duration. If the value
 		// is zero, then idle connections are not closed. Applications should set
 		// the timeout to a value less than the server's timeout.
-		IdleTimeout: e.IdleTimeout,
+		IdleTimeout: e.TimeoutIdle,
 		// If Wait is true and the pool is at the MaxActive limit, then Get() waits
 		// for a connection to be returned to the pool before returning.
 		Wait: e.Wait,
@@ -72,7 +74,10 @@ func (e *Env) Config(opts ...redis.DialOption) *redis.Pool {
 		// The connection returned from Dial must not be in a special state
 		// (subscribed to pubsub channel, transaction started, ...).
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.DialURL(e.URI, opts...)
+			c, err := redis.DialURL(e.URI,
+				redis.DialReadTimeout(e.TimeoutRead),
+				redis.DialWriteTimeout(e.TimeoutWrite),
+			)
 			return c, errors.WithStack(err)
 		},
 		// TestOnBorrow is an optional application supplied function for checking

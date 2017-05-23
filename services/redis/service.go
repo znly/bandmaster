@@ -53,7 +53,10 @@ type Service struct {
 //   	// The connection returned from Dial must not be in a special state
 //   	// (subscribed to pubsub channel, transaction started, ...).
 //   	Dial: func() (redis.Conn, error) {
-//   		c, err := redis.DialURL(uri, opts...)
+//   		c, err := redis.DialURL(uri,
+//   			redis.DialReadTimeout(time.Second),
+//   			redis.DialWriteTimeout(time.Second),
+//   		)
 //   		return c, errors.WithStack(err)
 //   	},
 //   	// TestOnBorrow is an optional application supplied function for checking
@@ -64,7 +67,7 @@ type Service struct {
 //   	TestOnBorrow: func(c redis.Conn, t time.Time) error { return c.Err() },
 //   }
 //
-func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
+func DefaultConfig(uri string) *redis.Pool {
 	return &redis.Pool{
 		// Maximum number of idle connections in the pool.
 		MaxIdle: 32,
@@ -84,7 +87,10 @@ func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 		// The connection returned from Dial must not be in a special state
 		// (subscribed to pubsub channel, transaction started, ...).
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.DialURL(uri, opts...)
+			c, err := redis.DialURL(uri,
+				redis.DialReadTimeout(time.Second),
+				redis.DialWriteTimeout(time.Second),
+			)
 			return c, errors.WithStack(err)
 		},
 		// TestOnBorrow is an optional application supplied function for checking
