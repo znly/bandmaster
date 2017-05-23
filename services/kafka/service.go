@@ -110,7 +110,7 @@ func DefaultConfig(
 	return config
 }
 
-// New creates a new service using the provided Kafka cluster configuration.
+// New creates a new Kafka service using the provided Kafka cluster configuration.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `sarama_cluster.Config`.
 //

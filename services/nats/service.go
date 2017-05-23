@@ -55,7 +55,7 @@ func DefaultConfig(addrs ...string) *nats.Options {
 	return &natsOpts
 }
 
-// New creates a new service using the provided `nats.Options`.
+// New creates a new NATS service using the provided `nats.Options`.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `nats.Options`.
 //

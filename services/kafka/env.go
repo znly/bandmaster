@@ -29,7 +29,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Env can be used to configure a kafka session via the environment.
+// Env can be used to configure a Kafka session via the environment.
 //
 // It comes with sane default for a local development set-up.
 type Env struct {

@@ -96,7 +96,7 @@ func DefaultConfig(uri string, opts ...redis.DialOption) *redis.Pool {
 	}
 }
 
-// New creates a new service using the provided `redis.Pool`.
+// New creates a new Redis service using the provided `redis.Pool`.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `redis.Pool`.
 //

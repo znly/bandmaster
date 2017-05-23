@@ -170,5 +170,3 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 
 	return nil
 }
-
-// -----------------------------------------------------------------------------

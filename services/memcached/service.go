@@ -46,7 +46,7 @@ func DefaultConfig(addrs ...string) Config {
 	return Config{Addrs: addrs, RWTimeout: time.Second}
 }
 
-// New creates a new service using the provided parameters.
+// New creates a new Memcached service using the provided parameters.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `Config`.
 //

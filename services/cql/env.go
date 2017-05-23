@@ -28,7 +28,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Env can be used to configure a gocql session via the environment.
+// Env can be used to configure a CQL session via the environment.
 //
 // It comes with sane default for a local development set-up.
 type Env struct {
@@ -96,7 +96,7 @@ func (e *Env) String() string {
 
 // -----------------------------------------------------------------------------
 
-// Consistency is used to configure gocql's consistency value via the
+// Consistency is used to configure CQL's consistency value via the
 // environment.
 type Consistency gocql.Consistency
 

@@ -24,7 +24,8 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Service implements a ES service based on the 'olivere/elastic.v2' package.
+// Service implements an ElasticSearch (v2) service based on the
+// 'olivere/elastic.v2' package.
 type Service struct {
 	*bandmaster.ServiceBase // inheritance
 
@@ -42,7 +43,7 @@ type Config struct {
 // DefaultConfig returns a `Config` with no elastic options.
 func DefaultConfig(addr string) Config { return Config{Addr: addr} }
 
-// New creates a new service using the provided configuration.
+// New creates a new ElasticSearch (v2) service using the provided configuration.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `Config`.
 //

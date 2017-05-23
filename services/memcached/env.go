@@ -27,7 +27,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Env can be used to configure a memcached session via the environment.
+// Env can be used to configure a Memcached session via the environment.
 //
 // It comes with sane default for a local development set-up.
 type Env struct {
@@ -47,7 +47,7 @@ func NewEnv(prefix string) (*Env, error) {
 	return e, nil
 }
 
-// Config returns a memcached config using the values from the environment.
+// Config returns a Memcached config using the values from the environment.
 func (e *Env) Config() Config {
 	return Config{Addrs: e.Addrs, RWTimeout: e.RWTimeout}
 }

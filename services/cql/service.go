@@ -59,7 +59,7 @@ func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
 	return cluster
 }
 
-// New creates a new service using the provided `gocql.ClusterConfig`.
+// New creates a new CQL service using the provided `gocql.ClusterConfig`.
 // Use `DefaultConfig()` or the helpers for environment-based configuration to
 // get a pre-configured `gocql.ClusterConfig`.
 //
