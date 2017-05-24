@@ -244,8 +244,12 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 				zap.String("service", name), zap.String("err", err.Error()),
 				zap.Uint("attempt", attempts),
 			)
-			time.Sleep(ib)
-			ib *= 2
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(ib):
+				ib *= 2
+			}
 		}
 		base.lock.Lock()
 		errC := make(chan error, 1)
