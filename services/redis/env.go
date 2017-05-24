@@ -32,7 +32,7 @@ import (
 //
 // It comes with sane default for a local development set-up.
 type Env struct {
-	URI            string        `envconfig:"URI" default:"redis://localhost:6479"`
+	URI            string        `envconfig:"URI" default:"redis://localhost:6379"`
 	MaxConnsIdle   int           `envconfig:"MAX_CONNS_IDLE" default:"32"`
 	MaxConnsActive int           `envconfig:"MAX_CONNS_ACTIVE" default:"32"`
 	TimeoutIdle    time.Duration `envconfig:"TIMEOUT_IDLE" default:"45s"`
