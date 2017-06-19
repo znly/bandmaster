@@ -39,7 +39,6 @@ type Env struct {
 	Bufsize int      `envconfig:"BUFSIZE" default:"4096"`
 
 	/* Producer */
-	ProdPushTopics   []string    `envconfig:"PROD_PUSH_TOPICS" default:""`
 	ProdNotifSuccess bool        `envconfig:"PROD_NOTIF_SUCCESS" default:"false"`
 	ProdNotifError   bool        `envconfig:"PROD_NOTIF_ERROR" default:"true"`
 	ProdCompression  Compression `envconfig:"PROD_COMPRESSION" default:"none"`
