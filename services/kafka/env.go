@@ -47,7 +47,6 @@ type Env struct {
 	/* Consumer */
 	ConsPullTopics           []string      `envconfig:"CONS_PULL_TOPICS" default:""`
 	ConsGroupID              string        `envconfig:"CONS_GROUP_ID" default:""`
-	ConsRoutines             uint          `envconfig:"CONS_ROUTINES" default:"32"`
 	ConsNotifRebalance       bool          `envconfig:"CONS_NOTIF_REBALANCE" default:"true"`
 	ConsNotifError           bool          `envconfig:"CONS_NOTIF_ERROR" default:"true"`
 	ConsOffsetInitial        int64         `envconfig:"CONS_OFFSET_INITIAL" default:"-1"` // OffsetNewest
