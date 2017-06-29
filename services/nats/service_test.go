@@ -17,7 +17,7 @@ package nats
 import (
 	"testing"
 
-	"github.com/nats-io/nats"
+	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"

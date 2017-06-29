@@ -23,7 +23,7 @@ import (
 
 	"github.com/fatih/camelcase"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nats-io/nats"
+	"github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
 )
 
