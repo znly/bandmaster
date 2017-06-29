@@ -60,6 +60,7 @@ func NewEnv(prefix string) (*Env, error) {
 // Config returns a `nats.Options` using the values from the environment.
 func (e *Env) Config() *nats.Options {
 	var opts nats.Options
+	opts.Servers = e.Addrs
 	opts.AllowReconnect = e.AllowReconnect
 	opts.MaxReconnect = e.MaxReconnect
 	opts.ReconnectWait = e.ReconnectWait
