@@ -37,6 +37,7 @@ type Env struct {
 	Timeout        time.Duration `envconfig:"TIMEOUT" default:"30s"`
 	NbConns        int           `envconfig:"NB_CONNS" default:"8"`
 	Consistency    Consistency   `envconfig:"CONSISTENCY" default:"LOCAL_QUORUM"`
+	HostFilter     string        `envconfig:"HOST_FILTER" default:""`
 
 	TimeoutLimit int64 `envconfig:"TIMEOUT_LIMIT" default:"10"`
 }
@@ -65,6 +66,10 @@ func (e *Env) Config() *gocql.ClusterConfig {
 	cluster.Timeout = e.Timeout
 	// number of connections per host
 	cluster.NumConns = e.NbConns
+	// hostfilter for multi-DC support
+	if len(e.HostFilter) > 0 {
+		cluster.HostFilter = gocql.DataCentreHostFilter(e.HostFilter)
+	}
 
 	return cluster
 }
