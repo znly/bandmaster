@@ -1,5 +1,5 @@
 hash: 54388d8bcca7f5cb5111b2f9925e2a601722366486873e282c52d937ed061437
-updated: 2017-08-21T17:37:27.483686752+02:00
+updated: 2017-08-21T14:08:03.656453872+02:00
 imports:
 - name: github.com/fatih/camelcase
   version: f6a740d52f961c60348ebb109adde9f4635d7540
@@ -15,7 +15,7 @@ imports:
 - name: github.com/rainycape/memcache
   version: 1031fa0ce2f20c1c0e1e1b51951d8ea02c84fa05
 - name: github.com/znly/bandmaster
-  version: a8d8a9125f81df608bd436f19af04dc0ad23b591
+  version: 24063764a6233fb23af92aacc54ae911c2e22acb
   subpackages:
   - services/memcached
   - services/redis

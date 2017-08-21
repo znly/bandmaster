@@ -1,3 +1,5 @@
+// +build ignore
+
 package main
 
 import (
@@ -23,7 +25,7 @@ func main() {
 	m := bandmaster.GlobalMaestro()
 
 	//m.AddService("wn-1", false, waiter.New(waiter.DefaultConfig()), "mc-1", "mc-3")
-	m.AddService("mc-1", true, memcached.New(time.Second, "localhost:11211"), "rd-1")
+	m.AddService("mc-1", true, memcached.New(memcached.DefaultConfig()), "rd-1")
 	m.AddService("mc-2", false, memcached.New(memcached.DefaultConfig()), "mc-1")
 	m.AddService("mc-3", true, memcached.New(memcached.DefaultConfig()), "mc-2")
 	m.AddService("rd-1", true, redis.New(redis.DefaultConfig("redis://localhost:6379/0")), "mc-2")
