@@ -1,0 +1,34 @@
+hash: 54388d8bcca7f5cb5111b2f9925e2a601722366486873e282c52d937ed061437
+updated: 2017-08-21T14:08:03.656453872+02:00
+imports:
+- name: github.com/fatih/camelcase
+  version: f6a740d52f961c60348ebb109adde9f4635d7540
+- name: github.com/garyburd/redigo
+  version: 433969511232c397de61b1442f9fd49ec06ae9ba
+  subpackages:
+  - internal
+  - redis
+- name: github.com/kelseyhightower/envconfig
+  version: f611eb38b3875cc3bd991ca91c51d06446afa14c
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/rainycape/memcache
+  version: 1031fa0ce2f20c1c0e1e1b51951d8ea02c84fa05
+- name: github.com/znly/bandmaster
+  version: 24063764a6233fb23af92aacc54ae911c2e22acb
+  subpackages:
+  - services/memcached
+  - services/redis
+- name: go.uber.org/atomic
+  version: 4e336646b2ef9fc6e47be8e21594178f98e5ebcf
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: 9d9d6135afe89b6fc4a05e9a8552526caba38048
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
+testImports: []

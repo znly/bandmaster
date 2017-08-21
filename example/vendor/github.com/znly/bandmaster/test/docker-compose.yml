@@ -1,0 +1,53 @@
+version: '2'
+services:
+
+    redis:
+        image: redis:3.2
+        ports:
+            - "6379:6379"
+        restart: on-failure
+
+    nats:
+        image: nats:0.9.6
+        ports:
+            - "4222:4222"
+        restart: on-failure
+
+    kafka:
+        image: spotify/kafka:latest
+        ports:
+            - "9092:9092"
+        environment:
+            - "ADVERTISED_HOST=localhost"
+            - "ADVERTISED_PORT=9092"
+        restart: on-failure
+
+    cql:
+        image: cassandra:3
+        ports:
+            - "9042:9042"
+        restart: on-failure
+
+    memcached:
+        image: memcached:1.4
+        ports:
+            - "11211:11211"
+        restart: on-failure
+
+    es1:
+        image: elasticsearch:1.7.6
+        ports:
+            - "9201:9200"
+        restart: on-failure
+
+    es2:
+        image: elasticsearch:2.4.5
+        ports:
+            - "9202:9200"
+        restart: on-failure
+
+    es5:
+        image: elasticsearch:5.4
+        ports:
+            - "9205:9200"
+        restart: on-failure
