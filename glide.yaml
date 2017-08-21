@@ -32,7 +32,7 @@ import:
 - package: gopkg.in/olivere/elastic.v5
   version: ^5.0.45
 - package: github.com/apache/thrift
-  version: ec64f23d236d7874e3b28ae86c833f57c7aa3389
+  version: 0dd823580c78a79ae9696eb9b3650e400fff140f
   subpackages:
   - lib/go/thrift
 - package: github.com/codahale/hdrhistogram
