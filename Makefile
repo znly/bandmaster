@@ -4,12 +4,12 @@ toc:
 	docker run --rm -it -v ${PWD}:/usr/src jorgeandrada/doctoc --github
 
 test:
-	staticcheck ./...
-	go vet ./...
-	go test -v -race -cpu 1,2,4,8,24 -cover -run=. -bench=. ./...
+	staticcheck . ./services
+	go vet . ./services
+	go test -v -race -cpu 1,2,4,8,24 -cover -run=. -bench=. . ./services
 
 bench:
-	go test -v -cpu 1,2,4,8,24 -cover -run=xxx -bench=. ./...
+	go test -v -cpu 1,2,4,8,24 -cover -run=xxx -bench=. . ./services
 
 test-bench:
-	go test -v -cpu 1,2,4,8,24 -cover -run=. -bench=. ./...
+	go test -v -cpu 1,2,4,8,24 -cover -run=. -bench=. . ./services
