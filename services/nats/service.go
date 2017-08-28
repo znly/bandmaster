@@ -26,44 +26,21 @@ import (
 
 // Service implements a NATS service based on the 'nats-io/nats' package.
 type Service struct {
-	*bandmaster.ServiceBase // inheritance
+	*bandmaster.ServiceBase // "inheritance"
 
 	opts *nats.Options
 	c    *nats.Conn
 }
 
-// DefaultConfig returns a `nats.Options` with the following defaults:
-//
-//   &nats.Options {
-//   	Servers:          addrs,
-//   	AllowReconnect:   true,
-//   	MaxReconnect:     60,
-//   	ReconnectWait:    2 * time.Second,
-//   	Timeout:          2 * time.Second,
-//   	PingInterval:     2 * time.Minute,
-//   	MaxPingsOut:      2,
-//   	SubChanLen:       8192,
-//   	ReconnectBufSize: 8 * 1024 * 1024, // 8MB
-//   	Dialer: &net.Dialer{
-//   		Timeout: 2 * time.Second,
-//   	},
-//   }
-//
-func DefaultConfig(addrs ...string) *nats.Options {
-	natsOpts := nats.DefaultOptions
-	natsOpts.Servers = addrs
-	return &natsOpts
-}
-
 // New creates a new NATS service using the provided `nats.Options`.
-// Use `DefaultConfig()` or the helpers for environment-based configuration to
-// get a pre-configured `nats.Options`.
+// You may use the helpers for environment-based configuration to get a
+// pre-configured `nats.Options` with sane defaults.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
 func New(opts *nats.Options) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(), // inheritance
+		ServiceBase: bandmaster.NewServiceBase(), // "inheritance"
 		opts:        opts,
 	}
 }

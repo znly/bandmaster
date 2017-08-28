@@ -17,7 +17,7 @@ package kafka
 import (
 	"testing"
 
-	"github.com/Shopify/sarama"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -26,8 +26,11 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Kafka(t *testing.T) {
-	conf := DefaultConfig(128, sarama.V0_10_1_0)
+	env, _ := NewEnv(uuid.New().String())
+	assert.NotNil(t, env)
+	conf := env.Config()
 	assert.NotNil(t, conf)
+
 	s := New(conf, []string{"localhost:9092"}, []string{"test"}, "cg")
 
 	services.TestService_Generic(t, s,
@@ -46,8 +49,11 @@ func TestService_Kafka(t *testing.T) {
 }
 
 func TestService_Kafka_ProducerOnly(t *testing.T) {
-	conf := DefaultConfig(128, sarama.V0_10_1_0)
+	env, _ := NewEnv(uuid.New().String())
+	assert.NotNil(t, env)
+	conf := env.Config()
 	assert.NotNil(t, conf)
+
 	s := New(conf, []string{"localhost:9092"}, nil, "")
 
 	services.TestService_Generic(t, s,

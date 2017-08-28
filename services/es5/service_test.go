@@ -19,6 +19,7 @@ import (
 
 	elastic "gopkg.in/olivere/elastic.v5"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -27,7 +28,11 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_ES5(t *testing.T) {
-	conf := DefaultConfig("http://localhost:9202")
+	env, _ := NewEnv(uuid.New().String())
+	assert.NotNil(t, env)
+	conf := env.Config()
+	assert.NotNil(t, conf)
+
 	conf.Opts = []elastic.ClientOptionFunc{elastic.SetSniff(false)}
 	services.TestService_Generic(t, New(conf),
 		func(t *testing.T, s bandmaster.Service) {

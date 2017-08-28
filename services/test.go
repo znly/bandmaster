@@ -26,7 +26,6 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 func TestService_Generic(t *testing.T, s bandmaster.Service,
 	specifics func(t *testing.T, s bandmaster.Service),
 ) {

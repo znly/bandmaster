@@ -16,7 +16,6 @@ package cql
 
 import (
 	"context"
-	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/znly/bandmaster"
@@ -26,48 +25,21 @@ import (
 
 // Service implements a CQL service based on the 'gocql/gocql' package.
 type Service struct {
-	*bandmaster.ServiceBase // inheritance
+	*bandmaster.ServiceBase // "inheritance"
 
 	cc *gocql.ClusterConfig
 	s  *gocql.Session
 }
 
-// DefaultConfig returns a `gocql.ClusterConfig` with the following defaults:
-//
-//   &gocql.ClusterConfig{
-//   	// connection timeout
-//   	Timeout: time.Second * 30,
-//   	// initial connection timeout, used during initial dial to server
-//   	ConnectTimeout: time.Second * 30,
-//   	// number of connections per host
-//   	NumConns: 8,
-//   	// default consistency level
-//   	Consistency: gocql.LocalQuorum,
-//   }
-//
-func DefaultConfig(addrs ...string) *gocql.ClusterConfig {
-	cluster := gocql.NewCluster(addrs...)
-	// default consistency level
-	cluster.Consistency = gocql.LocalQuorum
-	// number of connections per host
-	cluster.NumConns = 8
-	// initial connection timeout, used during initial dial to server
-	cluster.ConnectTimeout = time.Second * 30
-	// connection timeout
-	cluster.Timeout = time.Second * 30
-
-	return cluster
-}
-
 // New creates a new CQL service using the provided `gocql.ClusterConfig`.
-// Use `DefaultConfig()` or the helpers for environment-based configuration to
-// get a pre-configured `gocql.ClusterConfig`.
+// You may use the helpers for environment-based configuration to get a
+// pre-configured `gocql.ClusterConfig` with sane defaults.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
 func New(cc *gocql.ClusterConfig) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(), // inheritance
+		ServiceBase: bandmaster.NewServiceBase(), // "inheritance"
 		cc:          cc,
 	}
 }

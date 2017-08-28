@@ -17,6 +17,7 @@ package redis
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -25,7 +26,9 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Redis(t *testing.T) {
-	conf := DefaultConfig("redis://localhost:6379/0")
+	env, _ := NewEnv(uuid.New().String())
+	assert.NotNil(t, env)
+	conf := env.Config()
 	assert.NotNil(t, conf)
 
 	services.TestService_Generic(t, New(conf),

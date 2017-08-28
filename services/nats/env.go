@@ -15,13 +15,9 @@
 package nats
 
 import (
-	"fmt"
 	"net"
-	"reflect"
-	"strings"
 	"time"
 
-	"github.com/fatih/camelcase"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nats-io/go-nats"
 	"github.com/pkg/errors"
@@ -31,9 +27,9 @@ import (
 
 // Env can be used to configure a NATS session via the environment.
 //
-// It comes with sane default for a local development set-up.
+// It comes with sane defaults for a local development set-up.
 type Env struct {
-	Addrs            []string      `envconfig:"ADDRS" default:"localhost:4222"`
+	Addrs            []string      `envconfig:"ADDRS" default:"nats://localhost:4222"`
 	AllowReconnect   bool          `envconfig:"ALLOW_RECONNECT" default:"true"`
 	MaxReconnect     int           `envconfig:"MAX_RECONNECT" default:"60"`
 	ReconnectWait    time.Duration `envconfig:"RECONNECT_WAIT" default:"2s"`
@@ -71,30 +67,4 @@ func (e *Env) Config() *nats.Options {
 	opts.ReconnectBufSize = e.ReconnectBufSize
 	opts.Dialer = &net.Dialer{Timeout: e.DialerTimeout}
 	return &opts
-}
-
-// -----------------------------------------------------------------------------
-
-func (e *Env) String() string {
-	cv := reflect.ValueOf(*e)
-	fields := reflect.TypeOf(*e)
-	fieldStrs := make([]string, fields.NumField())
-	for i := 0; i < fields.NumField(); i++ {
-		f := fields.Field(i)
-		if len(f.Name) > 0 && strings.ToLower(f.Name[:1]) == f.Name[:1] {
-			continue // private field
-		}
-		fNameParts := camelcase.Split(f.Name)
-		for i, fnp := range fNameParts {
-			fNameParts[i] = strings.ToUpper(fnp)
-		}
-		fName := strings.Join(fNameParts, "_")
-		itf := cv.Field(i).Interface()
-		if _, ok := itf.(fmt.Stringer); ok {
-			fieldStrs[i] = fmt.Sprintf("%s = %s", fName, itf)
-		} else {
-			fieldStrs[i] = fmt.Sprintf("%s = %v", fName, itf)
-		}
-	}
-	return strings.Join(fieldStrs, "\n") + "\n"
 }

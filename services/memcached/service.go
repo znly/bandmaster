@@ -27,9 +27,9 @@ import (
 // Service implements a Memcached service based on the 'rainycape/memcached'
 // package.
 type Service struct {
-	*bandmaster.ServiceBase // inheritance
+	*bandmaster.ServiceBase // "inheritance"
 
-	conf Config
+	conf *Config
 
 	c *memcache.Client
 }
@@ -40,20 +40,15 @@ type Config struct {
 	TimeoutRW time.Duration
 }
 
-// DefaultConfig returns a `Config` with timeout of 2 seconds.
-func DefaultConfig(addrs ...string) Config {
-	return Config{Addrs: addrs, TimeoutRW: time.Second}
-}
-
 // New creates a new Memcached service using the provided parameters.
-// Use `DefaultConfig()` or the helpers for environment-based configuration to
-// get a pre-configured `Config`.
+// You may use the helpers for environment-based configuration to get a
+// pre-configured `Config` with sane defaults.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(c Config) bandmaster.Service {
+func New(c *Config) bandmaster.Service {
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(), // inheritance
+		ServiceBase: bandmaster.NewServiceBase(), // "inheritance"
 		conf:        c,
 	}
 }
@@ -105,7 +100,7 @@ func (s *Service) Stop(ctx context.Context) error {
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
-// NOTE: This will panic if `s` is not a `nats.Service`.
+// NOTE: This will panic if `s` is not a `memcached.Service`.
 func Client(s bandmaster.Service) *memcache.Client {
 	return s.(*Service).c // allowed to panic
 }

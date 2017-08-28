@@ -17,6 +17,7 @@ package memcached
 import (
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -25,7 +26,12 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Memcached(t *testing.T) {
-	services.TestService_Generic(t, New(DefaultConfig("localhost:11211")),
+	env, _ := NewEnv(uuid.New().String())
+	assert.NotNil(t, env)
+	conf := env.Config()
+	assert.NotNil(t, conf)
+
+	services.TestService_Generic(t, New(conf),
 		func(t *testing.T, s bandmaster.Service) {
 			c := Client(s)
 			assert.NotNil(t, c)

@@ -15,12 +15,8 @@
 package redis
 
 import (
-	"fmt"
-	"reflect"
-	"strings"
 	"time"
 
-	"github.com/fatih/camelcase"
 	"github.com/garyburd/redigo/redis"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
@@ -30,7 +26,7 @@ import (
 
 // Env can be used to configure a Redis session via the environment.
 //
-// It comes with sane default for a local development set-up.
+// It comes with sane defaults for a local development set-up.
 type Env struct {
 	URI            string        `envconfig:"URI" default:"redis://localhost:6379"`
 	MaxConnsIdle   int           `envconfig:"MAX_CONNS_IDLE" default:"32"`
@@ -87,30 +83,4 @@ func (e *Env) Config() *redis.Pool {
 		// closed.
 		TestOnBorrow: func(c redis.Conn, t time.Time) error { return c.Err() },
 	}
-}
-
-// -----------------------------------------------------------------------------
-
-func (e *Env) String() string {
-	cv := reflect.ValueOf(*e)
-	fields := reflect.TypeOf(*e)
-	fieldStrs := make([]string, fields.NumField())
-	for i := 0; i < fields.NumField(); i++ {
-		f := fields.Field(i)
-		if len(f.Name) > 0 && strings.ToLower(f.Name[:1]) == f.Name[:1] {
-			continue // private field
-		}
-		fNameParts := camelcase.Split(f.Name)
-		for i, fnp := range fNameParts {
-			fNameParts[i] = strings.ToUpper(fnp)
-		}
-		fName := strings.Join(fNameParts, "_")
-		itf := cv.Field(i).Interface()
-		if _, ok := itf.(fmt.Stringer); ok {
-			fieldStrs[i] = fmt.Sprintf("%s = %s", fName, itf)
-		} else {
-			fieldStrs[i] = fmt.Sprintf("%s = %v", fName, itf)
-		}
-	}
-	return strings.Join(fieldStrs, "\n") + "\n"
 }

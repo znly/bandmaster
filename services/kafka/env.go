@@ -15,14 +15,11 @@
 package kafka
 
 import (
-	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/Shopify/sarama"
 	sarama_cluster "github.com/bsm/sarama-cluster"
-	"github.com/fatih/camelcase"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 )
@@ -31,10 +28,10 @@ import (
 
 // Env can be used to configure a Kafka session via the environment.
 //
-// It comes with sane default for a local development set-up.
+// It comes with sane defaults for a local development set-up.
 type Env struct {
 	/* Common */
-	Version Version  `envconfig:"VERSION" default:"V0_9_0_1"`
+	Version Version  `envconfig:"VERSION" default:"V0_10_1_0"`
 	Addrs   []string `envconfig:"ADDRS" default:"localhost:9092"`
 	Bufsize int      `envconfig:"BUFSIZE" default:"4096"`
 
@@ -121,32 +118,6 @@ func (e *Env) Config() *sarama_cluster.Config {
 	config.Version = sarama.KafkaVersion(e.Version)
 
 	return config
-}
-
-// -----------------------------------------------------------------------------
-
-func (e *Env) String() string {
-	cv := reflect.ValueOf(*e)
-	fields := reflect.TypeOf(*e)
-	fieldStrs := make([]string, fields.NumField())
-	for i := 0; i < fields.NumField(); i++ {
-		f := fields.Field(i)
-		if len(f.Name) > 0 && strings.ToLower(f.Name[:1]) == f.Name[:1] {
-			continue // private field
-		}
-		fNameParts := camelcase.Split(f.Name)
-		for i, fnp := range fNameParts {
-			fNameParts[i] = strings.ToUpper(fnp)
-		}
-		fName := strings.Join(fNameParts, "_")
-		itf := cv.Field(i).Interface()
-		if _, ok := itf.(fmt.Stringer); ok {
-			fieldStrs[i] = fmt.Sprintf("%s = %s", fName, itf)
-		} else {
-			fieldStrs[i] = fmt.Sprintf("%s = %v", fName, itf)
-		}
-	}
-	return strings.Join(fieldStrs, "\n") + "\n"
 }
 
 // -----------------------------------------------------------------------------

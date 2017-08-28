@@ -27,9 +27,9 @@ import (
 // Service implements an ElasticSearch (v2) service based on the
 // 'olivere/elastic.v2' package.
 type Service struct {
-	*bandmaster.ServiceBase // inheritance
+	*bandmaster.ServiceBase // "inheritance"
 
-	conf Config
+	conf *Config
 
 	c *elastic.Client
 }
@@ -40,19 +40,16 @@ type Config struct {
 	Opts []elastic.ClientOptionFunc
 }
 
-// DefaultConfig returns a `Config` with no elastic options.
-func DefaultConfig(addr string) Config { return Config{Addr: addr} }
-
 // New creates a new ElasticSearch (v2) service using the provided configuration.
-// Use `DefaultConfig()` or the helpers for environment-based configuration to
-// get a pre-configured `Config`.
+// You may use the helpers for environment-based configuration to get a
+// pre-configured `Config` with sane defaults.
 //
 // It doesn't open any connection nor does it do any kind of I/O; i.e. it
 // cannot fail.
-func New(conf Config) bandmaster.Service {
+func New(conf *Config) bandmaster.Service {
 	conf.Opts = append(conf.Opts, elastic.SetURL(conf.Addr))
 	return &Service{
-		ServiceBase: bandmaster.NewServiceBase(), // inheritance
+		ServiceBase: bandmaster.NewServiceBase(), // "inheritance"
 		conf:        conf,
 	}
 }
@@ -91,6 +88,7 @@ func (s *Service) Start(
 // directly by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
 	if s.c != nil {
+		// TODO(cmc): close it, why did I remove that again?
 		s.c = nil // idempotency & restart support
 	}
 	return nil
