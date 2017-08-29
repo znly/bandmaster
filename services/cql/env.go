@@ -28,13 +28,14 @@ import (
 //
 // It comes with sane defaults for a local development set-up.
 type Env struct {
-	Addrs          []string      `envconfig:"ADDRS" default:"localhost:9042"`
-	TimeoutConnect time.Duration `envconfig:"TIMEOUT_CONNECT" default:"30s"`
-	TimeoutLimit   int64         `envconfig:"TIMEOUT_LIMIT" default:"10"`
-	Timeout        time.Duration `envconfig:"TIMEOUT" default:"30s"`
-	NbConns        int           `envconfig:"NB_CONNS" default:"8"`
-	Consistency    Consistency   `envconfig:"CONSISTENCY" default:"LOCAL_QUORUM"`
-	HostFilter     string        `envconfig:"HOST_FILTER" default:""`
+	Addrs           []string      `envconfig:"ADDRS" default:"localhost:9042"`
+	ProtocolVersion int           `envconfig:"PROTOCOL_VERSION" default:"2"`
+	TimeoutConnect  time.Duration `envconfig:"TIMEOUT_CONNECT" default:"30s"`
+	TimeoutLimit    int64         `envconfig:"TIMEOUT_LIMIT" default:"10"`
+	Timeout         time.Duration `envconfig:"TIMEOUT" default:"30s"`
+	NbConns         int           `envconfig:"NB_CONNS" default:"8"`
+	Consistency     Consistency   `envconfig:"CONSISTENCY" default:"LOCAL_QUORUM"`
+	HostFilter      string        `envconfig:"HOST_FILTER" default:""`
 }
 
 // NewEnv parses the environment and returns a new `Env` structure.
@@ -53,6 +54,8 @@ func NewEnv(prefix string) (*Env, error) {
 func (e *Env) Config() *gocql.ClusterConfig {
 	gocql.TimeoutLimit = e.TimeoutLimit
 	cluster := gocql.NewCluster(e.Addrs...)
+	// protocol version
+	cluster.ProtoVersion = e.ProtocolVersion
 	// consistency level
 	cluster.Consistency = gocql.Consistency(e.Consistency)
 	// initial connection timeout, used during initial dial to server
