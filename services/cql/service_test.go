@@ -29,6 +29,7 @@ func TestService_CQL(t *testing.T) {
 	env, _ := NewEnv(uuid.New().String())
 	assert.NotNil(t, env)
 	conf := env.Config()
+	conf.ProtoVersion = 3 // travis-ci doesn't support 2
 	assert.NotNil(t, conf)
 
 	// If DisableInitialHostLookup then the driver will not attempt to get
