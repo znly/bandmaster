@@ -18,7 +18,7 @@ before_install:
     - git config --global url."git@github.com:".insteadOf "https://github.com/"
     - go get -u github.com/Masterminds/glide
 install:
-    - docker-compose -f test/docker-compose.yml up -d nats kafka es1 es2 es3
+    - docker-compose -f test/docker-compose.yml up -d nats kafka es1 es2 es5
     - glide cc
     - glide update -v --force
 script:
