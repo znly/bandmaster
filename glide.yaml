@@ -86,3 +86,6 @@ import:
   - context
 - package: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
+testImport:
+- package: github.com/google/uuid
+  version: 064e2069ce9c359c118179501254f67d7d37ba24
