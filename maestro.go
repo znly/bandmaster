@@ -160,6 +160,12 @@ func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
 // required by the dependency-tree.
 // Services that don't depend on one another will be started in parallel.
 //
+// StartAll is blocking: on success, the returned channel is closed and hence
+// will return nil values indefinitely; on failure, one or more errors are
+// returned, then the channel gets closed.
+// In either case, once this channel is closed, except for those that returned
+// an error, all services can be safely considered up & running.
+//
 // If the specified context were to get cancelled for any reason (say a caught
 // SIGINT for example), the entire boot process will be cleanly cancelled too.
 // Note that some of the services may well have been successfully started
@@ -169,10 +175,6 @@ func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
 // Before actually doing anything, StartAll will check for missing and/or
 // circular dependencies; if any such thing were to be detected, an error will
 // be pushed on the returned channel and NOTHING will get started.
-//
-// StartAll is blocking: on success, the returned channel is closed and hence
-// returns nil values indefinitely; on failure, an error is returned before the
-// channel gets closed.
 func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -322,14 +324,16 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 // in which they were started.
 // Services that don't depend on one another will be stopped in parallel.
 //
+// StopAll is blocking: on success, the returned channel is closed and hence
+// will return nil values indefinitely; on failure, one or more errors are
+// returned, then the channel gets closed.
+// In either case, once this channel is closed, except for those that returned
+// an error, all services can be safely considered properly shutdown.
+//
 // If the specified context were to get cancelled for any reason (say a caught
 // SIGINT for example), the entire stop process will be cleanly cancelled too.
 // Note that some of the services may well have been successfully stopped before
 // the cancellation event actually hit the pipeline though.
-//
-// StopAll is blocking: on success, the returned channel is closed and hence
-// returns nil values indefinitely; on failure, an error is returned before the
-// channel gets closed.
 func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()

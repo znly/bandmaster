@@ -21,7 +21,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// ErrorKind enumerates the possible kind of errors returned by BandMaster.
 type ErrorKind int
 
 const (
@@ -44,8 +44,10 @@ const (
 	ErrServiceStopFailure  ErrorKind = iota // service failed to stop
 )
 
-// TODO(cmc)
-// /!\ only Kind field is guarantee to be present
+// Error is an error returned by BandMaster.
+//
+// Only the `Kind` field is guaranteed to be defined at all times; the rest
+// may or may not be set depending on the kind of the returned error.
 type Error struct {
 	Kind ErrorKind
 

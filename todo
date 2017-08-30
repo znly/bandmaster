@@ -1,7 +1,0 @@
-test each service implem
-
-doc
-
-2 must do:
-- inherit from ServiceBase
-- implement Start and Stop

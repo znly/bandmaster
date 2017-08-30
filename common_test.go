@@ -26,7 +26,8 @@ var _testServiceErrNotAllowedToStart = errors.New("not allowed to start yet!")
 
 // TestServiceimplements a Service for testing purposes.
 type TestService struct {
-	*ServiceBase     // inheritance
+	*ServiceBase // "inheritance"
+
 	lock             *sync.RWMutex
 	dontStart        bool // retry backoff
 	started, stopped bool
