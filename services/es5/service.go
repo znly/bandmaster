@@ -89,7 +89,6 @@ func (s *Service) Start(
 // directly by the end-user of the service.
 func (s *Service) Stop(ctx context.Context) error {
 	if s.c != nil {
-		// TODO(cmc): close it, why did I remove that again?
 		s.c = nil // idempotency & restart support
 	}
 	return nil
