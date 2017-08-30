@@ -23,7 +23,14 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// Service is the main interface behind Bandmaster, any service that wishes to
+// be operated by a Maestro must implement it.
+//
+// To ease the integration of new services into the system, a ServiceBase class
+// that you can pseudo-inherit from (i.e. embed) is provided and will
+// automagically fill in most of the boilerplate required to implement the
+// Service interface.
+// See any service implementation in "services/" folder for examples of this.
 type Service interface {
 	Start(ctx context.Context, deps map[string]Service) error
 	Stop(ctx context.Context) error
@@ -40,7 +47,11 @@ type Service interface {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// A ServiceBase implements most of the boilerplate required to satisfy the
+// Service interface.
+// You can, and should, embed it in your service structure to ease its
+// integration in BandMaster.
+// See any service implementation in "services/" folder for examples of this.
 type ServiceBase struct {
 	lock *sync.RWMutex
 
@@ -54,7 +65,8 @@ type ServiceBase struct {
 	stopped chan error
 }
 
-// TODO(cmc)
+// NewServiceBase returns a properly initialized ServiceBase that you can
+// embed in your service definition.
 func NewServiceBase() *ServiceBase {
 	return &ServiceBase{
 		lock:       &sync.RWMutex{},
@@ -66,37 +78,42 @@ func NewServiceBase() *ServiceBase {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 func (sb *ServiceBase) setName(name string) {
 	sb.lock.Lock()
 	sb.name = name
 	sb.lock.Unlock()
 }
+
+// Name returns the name of the service; it is thread-safe.
 func (sb *ServiceBase) Name() string {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
 	return sb.name
 }
 
-// TODO(cmc)
 func (sb *ServiceBase) setRequired(required bool) {
 	sb.lock.Lock()
 	sb.required = required
 	sb.lock.Unlock()
 }
+
+// Required returns true if the service is marked as required; it is
+// thread-safe.
 func (sb *ServiceBase) Required() bool {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
 	return sb.required
 }
 
-// TODO(cmc)
 func (sb *ServiceBase) setRetryConf(retries uint, initialBackoff time.Duration) {
 	sb.lock.Lock()
 	sb.retries = retries
 	sb.initialBackoff = initialBackoff
 	sb.lock.Unlock()
 }
+
+// RetryConf returns the number of retries and the initial value used by the
+// the service for exponential backoff; it is thread-safe.
 func (sb *ServiceBase) RetryConf() (uint, time.Duration) {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
@@ -105,7 +122,6 @@ func (sb *ServiceBase) RetryConf() (uint, time.Duration) {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 func (sb *ServiceBase) String() string {
 	name := sb.Name()
 	req := "optional"
@@ -117,7 +133,6 @@ func (sb *ServiceBase) String() string {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 func (sb *ServiceBase) addDependency(deps ...string) {
 	sb.lock.Lock()
 	defer sb.lock.Unlock()
@@ -137,7 +152,7 @@ func (sb *ServiceBase) addDependency(deps ...string) {
 	}
 }
 
-// TODO(cmc)
+// Dependencies returns a set of the direct dependencies of the service.
 func (sb *ServiceBase) Dependencies() map[string]struct{} {
 	sb.lock.RLock()
 	defer sb.lock.RUnlock()
@@ -152,17 +167,20 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// TODO(cmc): remove that context
+
+// Started returns an error channel that gets closed if the starting process
+// went successfully, or pushes an error otherwise.
 func (sb *ServiceBase) Started(ctx context.Context) <-chan error {
 	return cloneErrChannel(ctx, sb.started)
 }
 
-// TODO(cmc)
+// Stopped returns an error channel that gets closed if the stopping process
+// went successfully, or pushes an error otherwise.
 func (sb *ServiceBase) Stopped(ctx context.Context) <-chan error {
 	return cloneErrChannel(ctx, sb.stopped)
 }
 
-// TODO(cmc)
 func cloneErrChannel(ctx context.Context, c chan error) <-chan error {
 	errC := make(chan error, cap(c))
 	go func() {
