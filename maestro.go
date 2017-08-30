@@ -28,13 +28,13 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 var (
 	_gm     = NewMaestro()
 	_gmLock = &sync.RWMutex{}
 )
 
-// TODO(cmc)
+// GlobalMaestro returns package-level Maestro; this is what you want to use
+// most of the time. This is thread-safe.
 func GlobalMaestro() *Maestro {
 	_gmLock.RLock()
 	defer _gmLock.RUnlock()
@@ -42,7 +42,8 @@ func GlobalMaestro() *Maestro {
 	return _gm
 }
 
-// TODO(cmc)
+// ReplaceGlobalMaestro replaces the package-level Maestro with your own.
+// This is thred-safe.
 func ReplaceGlobalMaestro(m *Maestro) *Maestro {
 	_gmLock.Lock()
 	cur := _gm
@@ -53,28 +54,51 @@ func ReplaceGlobalMaestro(m *Maestro) *Maestro {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// A Maestro registers services and their dependencies, computes depency trees
+// and properly handles the boot & shutdown processes of these trees.
+//
+// It does not care the slightest as to what happens to a service during the
+// span of its lifetime; only boot & shutdown processes matter to it.
 type Maestro struct {
 	lock     *sync.RWMutex
 	services map[string]Service
 }
 
-// TODO(cmc)
+// NewMaestro instanciates a new local Maestro.
+//
+// Unless you're facing special circumstances, you might just as well use
+// the already instanciated, package-level Maestro.
 func NewMaestro() *Maestro {
 	return &Maestro{lock: &sync.RWMutex{}, services: map[string]Service{}}
 }
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// AddService registers a Service with the Maestro.
+//
+// The direct dependencies of this service can be specified using the names
+// with which they were themselves registered. You do NOT need to specify its
+// indirect dependencies.
+// You're free to indicate the names of dependencies that haven't been
+// registered yet: the final dependency-tree is only computed at StartAll()
+// time.
+//
+// The specified `req` boolean marks the service as required; which can be a
+// helpful indicator as to whether you can afford to ignore some errors that
+// might happen later on.
 func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
 	m.AddServiceWithBackoff(name, req, 0, 0, s, deps...)
 }
 
-// TODO(cmc)
+// AddServiceWithBackoff is an enhanced version of AddService that allows to
+// configure exponential backoff in case of failures to boot.
+//
+// `maxRetries` defines the maximum number of times that the service will try
+// to boot; while `initialBackoff` specifies the initial sleep-time before
+// each retry.
 func (m *Maestro) AddServiceWithBackoff(
 	name string, req bool,
-	retries uint, initialBackoff time.Duration,
+	maxRetries uint, initialBackoff time.Duration,
 	s Service, deps ...string,
 ) {
 	m.lock.Lock()
@@ -94,13 +118,16 @@ func (m *Maestro) AddServiceWithBackoff(
 
 	base.setName(name)
 	base.setRequired(req)
-	base.setRetryConf(retries, initialBackoff)
+	base.setRetryConf(maxRetries, initialBackoff)
 	base.addDependency(deps...)
 
 	m.services[name] = s
 }
 
-// TODO(cmc)
+// Service returns the service associated with the specified name, whether it is
+// marked as ready or not. It it thread-safe.
+//
+// If no such service exists, this method will return a nil value.
 func (m *Maestro) Service(name string) Service {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
@@ -108,12 +135,15 @@ func (m *Maestro) Service(name string) Service {
 	return m.services[name]
 }
 
-// TODO(cmc)
+// Service returns the service associated with the specified name, but blocks
+// until it is marked as ready before returning. It it thread-safe.
+//
+// If no such service exists, this method will immediately return a nil value.
+//
+// Cancelling the specified context by any mean will unblock the method and
+// return a nil value.
 func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
-	m.lock.RLock()
-	s := m.services[name]
-	m.lock.RUnlock()
-
+	s := m.Service(name)
 	if s == nil {
 		return nil
 	}
@@ -126,8 +156,23 @@ func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
-// Nothing is started in case of missing or circular dependencies.
+// StartAll starts all the dependencies referenced by this Maestro in the order
+// required by the dependency-tree.
+// Services that don't depend on one another will be started in parallel.
+//
+// If the specified context were to get cancelled for any reason (say a caught
+// SIGINT for example), the entire boot process will be cleanly cancelled too.
+// Note that some of the services may well have been successfully started
+// before the cancellation event actually hit the pipeline though: thus you
+// should probably call StopAll() after cancelling a boot process.
+//
+// Before actually doing anything, StartAll will check for missing and/or
+// circular dependencies; if any such thing were to be detected, an error will
+// be pushed on the returned channel and NOTHING will get started.
+//
+// StartAll is blocking: on success, the returned channel is closed and hence
+// returns nil values indefinitely; on failure, an error is returned before the
+// channel gets closed.
 func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -161,8 +206,7 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	return errC
 }
 
-// TODO(cmc)
-// EXPECTS LOCK
+// start expects the caller to hold (as writer) the Maestro's lock.
 func (m *Maestro) start(ctx context.Context, s Service) error {
 	base := serviceBase(s)
 
@@ -222,13 +266,13 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	case err = <-errC:
 	}
 	base.lock.Unlock()
-	retries, ib := base.RetryConf()
+	maxRetries, ib := base.RetryConf()
 	attempts := uint(0)
 	for err != nil {
 		attempts++
-		if attempts >= retries {
+		if attempts >= maxRetries {
 			zap.L().Warn("service failed to start",
-				zap.String("service", name), zap.String("err", err.Error()),
+				zap.String("service", name), zap.Error(err),
 				zap.Uint("attempt", attempts),
 			)
 			err = &Error{
@@ -241,7 +285,7 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 		} else {
 			msg := fmt.Sprintf("service failed to start, retrying in %v...", ib)
 			zap.L().Info(msg,
-				zap.String("service", name), zap.String("err", err.Error()),
+				zap.String("service", name), zap.Error(err),
 				zap.Uint("attempt", attempts),
 			)
 			select {
@@ -274,7 +318,18 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
+// StopAll stops all the services managed by the Maestro in the reversed order
+// in which they were started.
+// Services that don't depend on one another will be stopped in parallel.
+//
+// If the specified context were to get cancelled for any reason (say a caught
+// SIGINT for example), the entire stop process will be cleanly cancelled too.
+// Note that some of the services may well have been successfully stopped before
+// the cancellation event actually hit the pipeline though.
+//
+// StopAll is blocking: on success, the returned channel is closed and hence
+// returns nil values indefinitely; on failure, an error is returned before the
+// channel gets closed.
 func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -299,8 +354,7 @@ func (m *Maestro) StopAll(ctx context.Context) <-chan error {
 	return errC
 }
 
-// TODO(cmc)
-// EXPECTS LOCK
+// stop expects the caller to hold (as writer) the Maestro's lock.
 func (m *Maestro) stop(ctx context.Context, s Service) error {
 	base := serviceBase(s)
 
@@ -351,7 +405,7 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 	base.lock.Unlock()
 	if err != nil {
 		zap.L().Info("service failed to stop",
-			zap.String("service", name), zap.String("err", err.Error()),
+			zap.String("service", name), zap.Error(err),
 		)
 		err = &Error{
 			Kind:       ErrServiceStopFailure,
@@ -374,8 +428,7 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
-// EXPECTS LOCK
+// hasMissingDeps expects the caller to hold (as writer) the Maestro's lock.
 func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 	for _, s := range m.services {
 		base := serviceBase(s)
@@ -393,8 +446,7 @@ func (m *Maestro) hasMissingDeps(errC chan error) (failure bool) {
 	return failure
 }
 
-// TODO(cmc)
-// EXPECTS LOCK
+// hasCircularDeps expects the caller to hold (as writer) the Maestro's lock.
 func (m *Maestro) hasCircularDeps(errC chan error) bool {
 	var hasCircularDepsRec func(
 		cur, parent Service, met map[string]uint, lvl uint,
@@ -446,7 +498,6 @@ func (m *Maestro) hasCircularDeps(errC chan error) bool {
 
 // -----------------------------------------------------------------------------
 
-// TODO(cmc)
 func serviceBase(s Service) *ServiceBase {
 	base := reflect.ValueOf(s).Elem().FieldByName("ServiceBase")
 	if base.Kind() == reflect.Invalid {
