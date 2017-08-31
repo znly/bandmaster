@@ -29,7 +29,7 @@ It provides a fully tested & thread-safe package that implements some of the mos
 - ElasticSearch-v2 via [gopkg.in/olivere/elastic.v3](https://gopkg.in/olivere/elastic.v3)
 - ElasticSearch-v5 via [gopkg.in/olivere/elastic.v5](https://gopkg.in/olivere/elastic.v5)
 
-In addition to these standard implementations, *BandMaster* provides a straightforward API so you can easily implement your own services; see [this section](#implementing-a-custom-service) for more details.
+In addition to these standard implementations, *BandMaster* provides a straightforward API so that you can easily implement your own services; see [this section](#implementing-a-custom-service) for more details.
 
 ---
 
@@ -162,7 +162,22 @@ It should output the following when ran, explaining pretty straightforwardly wha
 
 ### Implementing a custom service
 
-TODO
+The simplest way to implement a new service is to copy & modify one of the already existing ones.  
+Each service is implemented in its own subpackage, all of which you can find in the [services/](./services/) directory.
+
+The [`nats`](./services/nats) package is a good starting point for your future implementations.
+
+Services are always composed of 3 files:
+- **env.go**  
+This defines an `Env` structure that handles all of the service's configuration and can easily be converted to its native configuration type (e.g. `nats.Options`).  
+Make sure to always provide sane defaults that will ease development in a local environment.
+- **service.go**  
+It defines the actual `Service` structure that plugs into *BandMaster*'s machinery by pseudo-inheriting (embedding) from `bandmaster.ServiceBase`.  
+This also defines the self-explanatory `Start` & `Stop` methods, as well as a `Client` (or similarly named) method that allows the caller to retrieve the actual client managed by the service (e.g. `nats.Conn`).
+- **service_test.go**  
+Finally, this plugs the newly implemented service into the generic *BandMaster* test suite via `services.TestService_Generic`.  
+These tests will make sure that the service's behavior is consistent with every other services' supported by *BandMaster*, in any circumstances.
+
 
 ### Error handling
 
