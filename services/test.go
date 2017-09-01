@@ -33,6 +33,12 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 
 	m := bandmaster.NewMaestro()
 	m.AddServiceWithBackoff("A", true, 10, time.Millisecond*200, s)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 
 	ctx, canceller := context.WithCancel(context.Background())
 	canceller()
@@ -44,16 +50,40 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	err := errors.Cause(<-m.StartAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StartAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 
 	err = errors.Cause(<-m.StartAll(context.Background()))
 	assert.NoError(t, err)
+	select {
+	case <-s.Stopped(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Started(context.Background()))
+	}
 	/* idempotency (success) */
 	err = errors.Cause(<-m.StartAll(context.Background()))
 	assert.NoError(t, err)
+	select {
+	case <-s.Stopped(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Started(context.Background()))
+	}
 
 	if specifics != nil {
 		specifics(t, s)
@@ -69,24 +99,62 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	err = errors.Cause(<-m.StopAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
+	select {
+	case <-s.Stopped(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Started(context.Background()))
+	}
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StopAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
+	select {
+	case <-s.Stopped(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Started(context.Background()))
+	}
 
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 	/* idempotency (success) */
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 
 	/* restart support */
 	err = <-m.StartAll(context.Background())
 	assert.NoError(t, err)
+	select {
+	case <-s.Stopped(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Started(context.Background()))
+	}
+
 	if specifics != nil {
 		specifics(t, s)
 		return
 	}
+
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
+	select {
+	case <-s.Started(context.Background()):
+		assert.FailNow(t, "shouldn't be here")
+	default:
+		assert.NoError(t, <-s.Stopped(context.Background()))
+	}
 }
