@@ -68,12 +68,14 @@ type ServiceBase struct {
 // NewServiceBase returns a properly initialized ServiceBase that you can
 // embed in your service definition.
 func NewServiceBase() *ServiceBase {
-	return &ServiceBase{
+	sb := &ServiceBase{
 		lock:       &sync.RWMutex{},
 		directDeps: map[string]struct{}{},
 		started:    make(chan error, 1),
 		stopped:    make(chan error, 1),
 	}
+	sb.stopped <- nil // stopped state at birth
+	return sb
 }
 
 // -----------------------------------------------------------------------------
@@ -166,8 +168,6 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 }
 
 // -----------------------------------------------------------------------------
-
-// TODO(cmc): remove that context
 
 // Started returns an error channel that gets closed if the starting process
 // went successfully, or pushes an error otherwise.
