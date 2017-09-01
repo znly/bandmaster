@@ -41,7 +41,7 @@ type Env struct {
 	ProdCompression  Compression `envconfig:"PROD_COMPRESSION" default:"none"`
 
 	/* Consumer */
-	ConsPullTopics           []string      `envconfig:"CONS_PULL_TOPICS" default:""`
+	ConsTopics               []string      `envconfig:"CONS_TOPICS" default:""`
 	ConsGroupID              string        `envconfig:"CONS_GROUP_ID" default:""`
 	ConsNotifRebalance       bool          `envconfig:"CONS_NOTIF_REBALANCE" default:"true"`
 	ConsNotifError           bool          `envconfig:"CONS_NOTIF_ERROR" default:"true"`
@@ -63,51 +63,51 @@ func NewEnv(prefix string) (*Env, error) {
 	return e, nil
 }
 
-// Config returns a `sarama_cluster.Config` using the values from the environment.
-func (e *Env) Config() *sarama_cluster.Config {
-	config := sarama_cluster.NewConfig()
+// Config returns a `Config` using the values from the environment.
+func (e *Env) Config() *Config {
+	clusterConf := sarama_cluster.NewConfig()
 
 	/* CONSUMER */
 
 	// If enabled, rebalance notification will be returned on the
 	// Notifications channel.
-	config.Group.Return.Notifications = e.ConsNotifRebalance
+	clusterConf.Group.Return.Notifications = e.ConsNotifRebalance
 	// If enabled, any errors that occurred while consuming are returned on
 	// the Errors channel.
-	config.Consumer.Return.Errors = e.ConsNotifError
+	clusterConf.Consumer.Return.Errors = e.ConsNotifError
 	// The initial offset to use if no offset was previously committed.
 	// Should be OffsetNewest or OffsetOldest.
-	config.Consumer.Offsets.Initial = e.ConsOffsetInitial
+	clusterConf.Consumer.Offsets.Initial = e.ConsOffsetInitial
 	// How frequently to commit updated offsets.
-	config.Consumer.Offsets.CommitInterval = e.ConsOffsetCommitInterval
+	clusterConf.Consumer.Offsets.CommitInterval = e.ConsOffsetCommitInterval
 	// The retention duration for committed offsets. If zero, disabled
 	// (in which case the `offsets.retention.minutes` option on the
 	// broker will be used).  Kafka only supports precision up to
 	// milliseconds; nanoseconds will be truncated. Requires Kafka
 	// broker version 0.9.0 or later.
-	config.Consumer.Offsets.Retention = e.ConsOffsetRetention
+	clusterConf.Consumer.Offsets.Retention = e.ConsOffsetRetention
 	// How long to wait after a failing to read from a partition before
 	// trying again.
-	config.Consumer.Retry.Backoff = e.ConsRetryBackoff
+	clusterConf.Consumer.Retry.Backoff = e.ConsRetryBackoff
 
 	/* PRODUCER */
 
 	// If enabled, successfully delivered messages will be returned on the
 	// successes channel.
-	config.Producer.Return.Successes = e.ProdNotifSuccess
+	clusterConf.Producer.Return.Successes = e.ProdNotifSuccess
 	// If enabled, messages that failed to deliver will be returned on the
 	// Errors channel, including error.
-	config.Producer.Return.Errors = e.ProdNotifError
+	clusterConf.Producer.Return.Errors = e.ProdNotifError
 	// The type of compression to use on messages (defaults to no compression).
 	// Similar to `compression.codec` setting of the JVM producer.
-	config.Producer.Compression = sarama.CompressionCodec(e.ProdCompression)
+	clusterConf.Producer.Compression = sarama.CompressionCodec(e.ProdCompression)
 
 	/* COMMON */
 
 	// The number of events to buffer in internal and external channels. This
 	// permits the producer and consumer to continue processing some messages
 	// in the background while user code is working, greatly improving throughput.
-	config.ChannelBufferSize = e.Bufsize
+	clusterConf.ChannelBufferSize = e.Bufsize
 
 	// The version of Kafka that Sarama will assume it is running against.
 	// Defaults to the oldest supported stable version. Since Kafka provides
@@ -115,9 +115,16 @@ func (e *Env) Config() *sarama_cluster.Config {
 	// will not break anything, although it may prevent you from using the
 	// latest features. Setting it to a version greater than you are actually
 	// running may lead to random breakage.
-	config.Version = sarama.KafkaVersion(e.Version)
+	clusterConf.Version = sarama.KafkaVersion(e.Version)
 
-	return config
+	conf := &Config{
+		ClusterConf:     clusterConf,
+		Addrs:           e.Addrs,
+		ConsumerTopics:  e.ConsTopics,
+		ConsumerGroupID: e.ConsGroupID,
+	}
+
+	return conf
 }
 
 // -----------------------------------------------------------------------------

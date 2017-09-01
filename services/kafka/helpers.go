@@ -55,7 +55,7 @@ func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
 		}
 	}
 
-	if ss.conf.Group.Return.Notifications {
+	if ss.conf.ClusterConf.Group.Return.Notifications {
 		go func() {
 			var nbCycle uint64 = 1
 			for {
@@ -74,7 +74,7 @@ func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
 			}
 		}()
 	}
-	if ss.conf.Consumer.Return.Errors {
+	if ss.conf.ClusterConf.Consumer.Return.Errors {
 		go func() {
 			for {
 				select {
@@ -117,7 +117,7 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 		return err
 	}
 
-	if ss.conf.Producer.Return.Errors {
+	if ss.conf.ClusterConf.Producer.Return.Errors {
 		go func() {
 			for {
 				select {
@@ -142,7 +142,7 @@ func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 			}
 		}()
 	}
-	if ss.conf.Producer.Return.Successes {
+	if ss.conf.ClusterConf.Producer.Return.Successes {
 		go func() {
 			for {
 				select {

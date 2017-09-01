@@ -32,29 +32,28 @@ type Service struct {
 	ctx       context.Context // lifecycle
 	canceller context.CancelFunc
 
-	conf            *sarama_cluster.Config
-	addrs           []string
-	consumerTopics  []string
-	consumerGroupID string
+	conf *Config
 
 	c *sarama_cluster.Consumer
 	p sarama.AsyncProducer
 }
 
-// New creates a new Kafka service using the provided Kafka cluster configuration.
+// Config contains the necessary configuration for a Kafka service.
+type Config struct {
+	ClusterConf *sarama_cluster.Config
+
+	Addrs           []string
+	ConsumerTopics  []string
+	ConsumerGroupID string
+}
+
+// New creates a new Kafka service using the provided configuration.
 // You may use the helpers for environment-based configuration to get a
-// pre-configured `sarama_cluster.Config` with sane defaults.
+// pre-configured `Config` with sane defaults.
 //
 // New doesn't open any connection, doesn't do any kind of I/O, nor does it
 // check the validity of the passed configuration; i.e. it cannot fail.
-//
-// Both `consumerTopics` & `consumerGroupID` are optional: if one of them
-// is not specified, no consumer will be created during initialization.
-//
-// TODO(cmc): this should take a `Config` and nothing else. Clean this.
-func New(conf *sarama_cluster.Config,
-	addrs []string, consumerTopics []string, consumerGroupID string,
-) bandmaster.Service {
+func New(conf *Config) bandmaster.Service {
 	ctx, canceller := context.WithCancel(context.Background())
 	return &Service{
 		ServiceBase: bandmaster.NewServiceBase(), // "inheritance"
@@ -62,10 +61,7 @@ func New(conf *sarama_cluster.Config,
 		ctx:       ctx,
 		canceller: canceller,
 
-		conf:            conf,
-		addrs:           addrs,
-		consumerTopics:  consumerTopics,
-		consumerGroupID: consumerGroupID,
+		conf: conf,
 	}
 }
 
@@ -80,13 +76,13 @@ func New(conf *sarama_cluster.Config,
 // directly by the end-user of the service.
 func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 	var err error
-	if err = s.conf.Validate(); err != nil {
+	if err = s.conf.ClusterConf.Validate(); err != nil {
 		return err
 	}
 	if s.c == nil { // idempotency
-		if len(s.consumerGroupID) > 0 && len(s.consumerTopics) > 0 {
-			s.c, err = sarama_cluster.NewConsumer(
-				s.addrs, s.consumerGroupID, s.consumerTopics, s.conf,
+		if len(s.conf.ConsumerGroupID) > 0 && len(s.conf.ConsumerTopics) > 0 {
+			s.c, err = sarama_cluster.NewConsumer(s.conf.Addrs,
+				s.conf.ConsumerGroupID, s.conf.ConsumerTopics, s.conf.ClusterConf,
 			)
 			if err != nil {
 				return err
@@ -94,7 +90,8 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 		}
 	}
 	if s.p == nil { // idempotency
-		s.p, err = sarama.NewAsyncProducer(s.addrs, &s.conf.Config)
+		s.p, err = sarama.NewAsyncProducer(
+			s.conf.Addrs, &s.conf.ClusterConf.Config)
 		if err != nil {
 			return err
 		}
@@ -149,9 +146,9 @@ func Producer(s bandmaster.Service) sarama.AsyncProducer {
 	return s.(*Service).p // allowed to panic
 }
 
-// Config returns the underlying configuration of the given service.
+// Conf returns the underlying configuration of the given service.
 //
 // NOTE: This will panic if `s` is not a `kafka.Service`.
-func Config(s bandmaster.Service) *sarama_cluster.Config {
+func Conf(s bandmaster.Service) *Config {
 	return s.(*Service).conf // allowed to panic
 }

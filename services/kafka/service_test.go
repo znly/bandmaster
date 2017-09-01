@@ -30,8 +30,10 @@ func TestService_Kafka(t *testing.T) {
 	assert.NotNil(t, env)
 	conf := env.Config()
 	assert.NotNil(t, conf)
+	conf.ConsumerTopics = []string{"test"}
+	conf.ConsumerGroupID = "cg"
 
-	s := New(conf, []string{"localhost:9092"}, []string{"test"}, "cg")
+	s := New(conf)
 
 	services.TestService_Generic(t, s,
 		func(t *testing.T, s bandmaster.Service) {
@@ -41,7 +43,7 @@ func TestService_Kafka(t *testing.T) {
 			p := Producer(s)
 			assert.NotNil(t, p)
 			assert.NotNil(t, p.Input())
-			cc := Config(s)
+			cc := Conf(s)
 			assert.NotNil(t, cc)
 			assert.Equal(t, conf, cc)
 		},
@@ -53,8 +55,10 @@ func TestService_Kafka_ProducerOnly(t *testing.T) {
 	assert.NotNil(t, env)
 	conf := env.Config()
 	assert.NotNil(t, conf)
+	conf.ConsumerTopics = nil
+	conf.ConsumerGroupID = ""
 
-	s := New(conf, []string{"localhost:9092"}, nil, "")
+	s := New(conf)
 
 	services.TestService_Generic(t, s,
 		func(t *testing.T, s bandmaster.Service) {
@@ -63,7 +67,7 @@ func TestService_Kafka_ProducerOnly(t *testing.T) {
 			p := Producer(s)
 			assert.NotNil(t, p)
 			assert.NotNil(t, p.Input())
-			cc := Config(s)
+			cc := Conf(s)
 			assert.NotNil(t, cc)
 			assert.Equal(t, conf, cc)
 		},
