@@ -29,11 +29,32 @@ It provides a fully tested & thread-safe package that implements some of the mos
 - ElasticSearch-v2 via [gopkg.in/olivere/elastic.v3](https://gopkg.in/olivere/elastic.v3)
 - ElasticSearch-v5 via [gopkg.in/olivere/elastic.v5](https://gopkg.in/olivere/elastic.v5)
 
+Any of these services would be configured and instanciated the exact same way:
+```Go
+	memcachedEnv, _ := bm_memcached.NewEnv("MC_EXAMPLE")
+	redisEnv, _ := bm_redis.NewEnv("RD_EXAMPLE")
+	cqlEnv, _ := bm_cql.NewEnv("CQL_EXAMPLE")
+	natsEnv, _ := bm_nats.NewEnv("NATS_EXAMPLE")
+	kafkaEnv, _ := bm_kafka.NewEnv("KAFKA_EXAMPLE")
+	es1Env, _ := bm_es1.NewEnv("ES1_EXAMPLE")
+	es2Env, _ := bm_es2.NewEnv("ES2_EXAMPLE")
+	es5Env, _ := bm_es5.NewEnv("ES5_EXAMPLE")
+
+	m.AddService("mc-1", true, bm_memcached.New(memcachedEnv.Config()))
+	m.AddService("rd-1", true, bm_redis.New(redisEnv.Config()))
+	m.AddService("cql-1", true, bm_cql.New(cqlEnv.Config()))
+	m.AddService("nts-1", true, bm_nats.New(natsEnv.Config()))
+	m.AddService("kfk-1", true, bm_kafka.New(kafkaEnv.Config()))
+	m.AddService("es1-1", true, bm_es1.New(es1Env.Config()))
+	m.AddService("es2-1", true, bm_es2.New(es2Env.Config()))
+	m.AddService("es5-1", true, bm_es5.New(es5Env.Config()))
+```
+
 In addition to these standard implementations, *BandMaster* provides a straightforward API so that you can easily implement your own services; see [this section](#implementing-a-custom-service) for more details.
 
 ---
 
-**Table of Contents:**  
+**Table of Contents:**
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
@@ -54,7 +75,7 @@ In addition to these standard implementations, *BandMaster* provides a straightf
 
 ### Quickstart
 
-This example shows some basic usage of *BandMaster* that should cover 99.9% of the use-cases out there:  
+This example shows some basic usage of *BandMaster* that should cover 99.9% of the use-cases out there:
 ```Go
 // build logger with deterministic output for this example
 zap.ReplaceGlobals(newLogger())
@@ -130,7 +151,7 @@ for err := range m.StopAll(ctx) {
 }
 ```
 
-It should output the following when ran, explaining pretty straightforwardly what's actually going on:  
+It should output the following when ran, explaining pretty straightforwardly what's actually going on:
 ```
 {"level":"info","msg":"starting service...","service":"mc-2"}
 {"level":"info","msg":"starting service...","service":"rd-1"}
@@ -162,20 +183,20 @@ It should output the following when ran, explaining pretty straightforwardly wha
 
 ### Implementing a custom service
 
-The simplest way to implement a new service is to copy & modify one of the already existing ones.  
+The simplest way to implement a new service is to copy & modify one of the already existing ones.
 Each service is implemented in its own subpackage, all of which you can find in the [services/](./services/) directory.
 
 The [`nats`](./services/nats) package is a good starting point for your future implementations.
 
 Services are always composed of 3 files:
 - **env.go**  
-This defines an `Env` structure that handles all of the service's configuration and can easily be converted to its native configuration type (e.g. `nats.Options`).  
+This defines an `Env` structure that handles all of the service's configuration and can easily be converted to its native configuration type (e.g. `nats.Options`).
 Make sure to always provide sane defaults that will ease development in a local environment.
 - **service.go**  
-It defines the actual `Service` structure that plugs into *BandMaster*'s machinery by pseudo-inheriting (embedding) from `bandmaster.ServiceBase`.  
+It defines the actual `Service` structure that plugs into *BandMaster*'s machinery by pseudo-inheriting (embedding) from `bandmaster.ServiceBase`.
 This also defines the self-explanatory `Start` & `Stop` methods, as well as a `Client` (or similarly named) method that allows the caller to retrieve the actual client managed by the service (e.g. `nats.Conn`).
 - **service_test.go**  
-Finally, this plugs the newly implemented service into the generic *BandMaster* test suite via `services.TestService_Generic`.  
+Finally, this plugs the newly implemented service into the generic *BandMaster* test suite via `services.TestService_Generic`.
 These tests will make sure that the service's behavior is consistent with every other services' supported by *BandMaster*, in any circumstances.
 
 
@@ -185,7 +206,7 @@ These tests will make sure that the service's behavior is consistent with every 
 
 ### Logging
 
-*BandMaster* does some logging whenever a service or one of its dependency undergoes a change of state or it anything went wrong; for that, it uses the global logger from Uber's [*Zap*](https://github.com/uber-go/zap) package.  
+*BandMaster* does some logging whenever a service or one of its dependency undergoes a change of state or it anything went wrong; for that, it uses the global logger from Uber's [*Zap*](https://github.com/uber-go/zap) package.
 You can thus control the behavior of *BandMaster*'s logger however you like by calling [`zap.ReplaceGlobals`](https://godoc.org/go.uber.org/zap#ReplaceGlobals) at your convenience.
 
 For more information, see *Zap*'s [documentation](https://godoc.org/go.uber.org/zap).
@@ -194,7 +215,7 @@ For more information, see *Zap*'s [documentation](https://godoc.org/go.uber.org/
 
 Contributions of any kind are welcome; especially additions to the library of Service implementations, and improvements to the env-based configuration of existing services.
 
-*BandMaster* is pretty-much frozen in terms of features; if you still find it to be lacking something, please file an issue to discuss it first.  
+*BandMaster* is pretty-much frozen in terms of features; if you still find it to be lacking something, please file an issue to discuss it first.
 Also, do not hesitate to open an issue if some piece of documentation looks either unclear or incomplete to you, nay is just missing entirely.
 
 *Code contributions must be thoroughly tested and documented.*

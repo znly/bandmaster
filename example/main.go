@@ -127,30 +127,29 @@ func main() {
 	}
 
 	// Output:
-	// {"level":"info","msg":"starting service...","service":"mc-2"}
-	// {"level":"info","msg":"starting service...","service":"rd-1"}
-	// {"level":"info","msg":"starting service...","service":"mc-1"}
 	// {"level":"info","msg":"starting service...","service":"mc-x"}
+	// {"level":"info","msg":"starting service...","service":"mc-2"}
 	// {"level":"info","msg":"starting service...","service":"mc-3"}
+	// {"level":"info","msg":"starting service...","service":"mc-1"}
+	// {"level":"info","msg":"starting service...","service":"rd-1"}
 	// {"level":"info","msg":"service successfully started","service":"'mc-2' [optional]"}
 	// {"level":"info","msg":"service successfully started","service":"'mc-3' [required]"}
 	// {"level":"info","msg":"service successfully started","service":"'rd-1' [required]"}
 	// {"level":"info","msg":"service successfully started","service":"'mc-1' [required]"}
-	// {"level":"info","msg":"service failed to start, retrying in 100ms...","service":"mc-x","error":"dial tcp 127.0.0.1:0: connect: can't assign requested address","attempt":1}
-	// {"level":"info","msg":"service failed to start, retrying in 200ms...","service":"mc-x","error":"dial tcp 127.0.0.1:0: connect: can't assign requested address","attempt":2}
-	// {"level":"warn","msg":"service failed to start","service":"mc-x","error":"dial tcp 127.0.0.1:0: connect: can't assign requested address","attempt":3}
+	// {"level":"info","msg":"service failed to start, retrying in 100ms...","service":"mc-x","attempts":1,"error":"dial tcp 127.0.0.1:0: connect: can't assign requested address"}
+	// {"level":"info","msg":"service failed to start, retrying in 200ms...","service":"mc-x","attempts":2,"error":"dial tcp 127.0.0.1:0: connect: can't assign requested address"}
+	// {"level":"warn","msg":"service failed to start","service":"mc-x","attempts":3,"error":"dial tcp 127.0.0.1:0: connect: can't assign requested address"}
 	// {"level":"error","msg":"couldn't start required service","error":"`mc-x`: service failed to start: dial tcp 127.0.0.1:0: connect: can't assign requested address","service":"mc-x"}
-	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011090"}
-	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011090"}
-	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011090"}
+	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011010"}
+	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011010"}
+	// {"level":"info","msg":"doing stuff with our new services...","memcacheds":"mc-1:0xc4200e85a0 mc-2:0xc4200e85e0 mc-3:0xc4200e8620","redis":"rd-1:0xc420011010"}
 	// {"level":"info","msg":"stopping service...","service":"mc-3"}
-	// {"level":"info","msg":"stopping service...","service":"mc-x"}
+	// {"level":"info","msg":"stopping service...","service":"rd-1"}
+	// {"level":"info","msg":"service is already stopped","service":"'mc-x' [required]"}
 	// {"level":"info","msg":"stopping service...","service":"mc-2"}
 	// {"level":"info","msg":"stopping service...","service":"mc-1"}
-	// {"level":"info","msg":"service successfully stopped","service":"'mc-2' [optional]"}
-	// {"level":"info","msg":"stopping service...","service":"rd-1"}
-	// {"level":"info","msg":"service successfully stopped","service":"'mc-3' [required]"}
-	// {"level":"info","msg":"service successfully stopped","service":"'rd-1' [required]"}
 	// {"level":"info","msg":"service successfully stopped","service":"'mc-1' [required]"}
-	// {"level":"info","msg":"service successfully stopped","service":"'mc-x' [required]"}
+	// {"level":"info","msg":"service successfully stopped","service":"'rd-1' [required]"}
+	// {"level":"info","msg":"service successfully stopped","service":"'mc-3' [required]"}
+	// {"level":"info","msg":"service successfully stopped","service":"'mc-2' [optional]"}
 }
