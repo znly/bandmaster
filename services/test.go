@@ -34,10 +34,10 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	m := bandmaster.NewMaestro()
 	m.AddServiceWithBackoff("A", true, 10, time.Millisecond*200, s)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 
 	ctx, canceller := context.WithCancel(context.Background())
@@ -51,38 +51,38 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StartAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 
 	err = errors.Cause(<-m.StartAll(context.Background()))
 	assert.NoError(t, err)
 	select {
-	case <-s.Stopped(context.Background()):
+	case <-s.Stopped():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Started(context.Background()))
+		assert.NoError(t, <-s.Started())
 	}
 	/* idempotency (success) */
 	err = errors.Cause(<-m.StartAll(context.Background()))
 	assert.NoError(t, err)
 	select {
-	case <-s.Stopped(context.Background()):
+	case <-s.Stopped():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Started(context.Background()))
+		assert.NoError(t, <-s.Started())
 	}
 
 	if specifics != nil {
@@ -100,48 +100,48 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	select {
-	case <-s.Stopped(context.Background()):
+	case <-s.Stopped():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Started(context.Background()))
+		assert.NoError(t, <-s.Started())
 	}
 	/* idempotency (error) */
 	err = errors.Cause(<-m.StopAll(ctx))
 	assert.Error(t, err)
 	assert.Equal(t, errExpected, err)
 	select {
-	case <-s.Stopped(context.Background()):
+	case <-s.Stopped():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Started(context.Background()))
+		assert.NoError(t, <-s.Started())
 	}
 
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 	/* idempotency (success) */
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 
 	/* restart support */
 	err = <-m.StartAll(context.Background())
 	assert.NoError(t, err)
 	select {
-	case <-s.Stopped(context.Background()):
+	case <-s.Stopped():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Started(context.Background()))
+		assert.NoError(t, <-s.Started())
 	}
 
 	if specifics != nil {
@@ -152,9 +152,9 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	err = <-m.StopAll(context.Background())
 	assert.NoError(t, err)
 	select {
-	case <-s.Started(context.Background()):
+	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")
 	default:
-		assert.NoError(t, <-s.Stopped(context.Background()))
+		assert.NoError(t, <-s.Stopped())
 	}
 }
