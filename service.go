@@ -41,8 +41,8 @@ type Service interface {
 
 	String() string
 
-	Started(ctx context.Context) <-chan error
-	Stopped(ctx context.Context) <-chan error
+	Started() <-chan error
+	Stopped() <-chan error
 }
 
 // -----------------------------------------------------------------------------
@@ -61,21 +61,27 @@ type ServiceBase struct {
 	initialBackoff time.Duration
 	directDeps     map[string]struct{}
 
-	started chan error
-	stopped chan error
+	startedCs  []chan error
+	started    bool
+	startedErr error
+	stoppedCs  []chan error
+	stopped    bool
+	stoppedErr error
 }
 
 // NewServiceBase returns a properly initialized ServiceBase that you can
 // embed in your service definition.
 func NewServiceBase() *ServiceBase {
-	sb := &ServiceBase{
+	return &ServiceBase{
 		lock:       &sync.RWMutex{},
 		directDeps: map[string]struct{}{},
-		started:    make(chan error, 1),
-		stopped:    make(chan error, 1),
+		startedCs:  make([]chan error, 0, 16),
+		started:    false,
+		startedErr: nil,
+		stoppedCs:  make([]chan error, 0, 16),
+		stopped:    true,
+		stoppedErr: nil,
 	}
-	sb.stopped <- nil // stopped state at birth
-	return sb
 }
 
 // -----------------------------------------------------------------------------
@@ -169,29 +175,114 @@ func (sb *ServiceBase) Dependencies() map[string]struct{} {
 
 // -----------------------------------------------------------------------------
 
-// Started returns an error channel that gets closed if the starting process
-// went successfully, or pushes an error otherwise.
-func (sb *ServiceBase) Started(ctx context.Context) <-chan error {
-	return cloneErrChannel(ctx, sb.started)
-}
+func (sb *ServiceBase) start(err error) error {
+	sb.lock.Lock()
+	defer sb.lock.Unlock()
 
-// Stopped returns an error channel that gets closed if the stopping process
-// went successfully, or pushes an error otherwise.
-func (sb *ServiceBase) Stopped(ctx context.Context) <-chan error {
-	return cloneErrChannel(ctx, sb.stopped)
-}
-
-func cloneErrChannel(ctx context.Context, c chan error) <-chan error {
-	errC := make(chan error, cap(c))
-	go func() {
-		defer close(errC)
-		select {
-		case err := <-c:
-			c <- err
-			errC <- err
-		case <-ctx.Done():
-			errC <- ctx.Err()
+	/* one or more of our dependencies have failed to start */
+	if err != nil {
+		sb.started = false
+		sb.startedErr = err
+		sb.stopped = !sb.started
+		sb.stoppedErr = nil
+		for _, startedC := range sb.startedCs {
+			startedC <- err
 		}
-	}()
+		return err
+	}
+
+	/* we're already running, this is a noop */
+	if sb.started {
+		return nil
+	}
+
+	/* successful boot */
+	sb.started = true
+	sb.startedErr = nil
+	sb.stopped = !sb.started
+	sb.stoppedErr = nil
+	for _, startedC := range sb.startedCs {
+		close(startedC)
+	}
+	sb.startedCs = make([]chan error, 0, 16)
+
+	return nil
+}
+
+// Started returns a channel that will get closed once the boot process went
+// successfully.
+// This is thread-safe.
+//
+// Every failed start attempt will push an error (retries due to exponential
+// backoff are not treated as failed attempts); hence you need to make sure
+// to keep reading continuously on the returned channel or you might block
+// the Maestro otherwise.
+func (sb *ServiceBase) Started() <-chan error {
+	sb.lock.Lock()
+	defer sb.lock.Unlock()
+
+	// preallocate 32 to avoid deadlocks if the end-user is sloppy with their
+	// goroutines... but not *too* sloppy though.
+	errC := make(chan error, 32)
+	if sb.started {
+		close(errC)
+	} else {
+		sb.startedCs = append(sb.startedCs, errC)
+	}
+	return errC
+}
+
+func (sb *ServiceBase) stop(err error) error {
+	sb.lock.Lock()
+	defer sb.lock.Unlock()
+
+	/* one or more of our parents have failed to stop */
+	if err != nil {
+		sb.stopped = false
+		sb.stoppedErr = err
+		for _, stoppedC := range sb.stoppedCs {
+			stoppedC <- err
+		}
+		return err
+	}
+
+	/* we're already stopped, this is a noop */
+	if sb.stopped {
+		return nil
+	}
+
+	/* successful shutdown */
+	sb.stopped = true
+	sb.stoppedErr = nil
+	sb.started = !sb.stopped
+	sb.startedErr = nil
+	for _, stoppedC := range sb.stoppedCs {
+		close(stoppedC)
+	}
+	sb.stoppedCs = make([]chan error, 0, 16)
+
+	return nil
+}
+
+// Stopped returns a channel that will get closed once the shutdown process went
+// successfully.
+// This is thread-safe.
+//
+// Every failed shutdown attempt will push an error (retries due to exponential
+// backoff are not treated as failed attempts); hence you need to make sure
+// to keep reading continuously on the returned channel or you might block
+// the Maestro otherwise.
+func (sb *ServiceBase) Stopped() <-chan error {
+	sb.lock.Lock()
+	defer sb.lock.Unlock()
+
+	// preallocate 32 to avoid deadlocks if the end-user is sloppy with their
+	// goroutines... but not *too* sloppy though.
+	errC := make(chan error, 32)
+	if sb.stopped {
+		close(errC)
+	} else {
+		sb.stoppedCs = append(sb.stoppedCs, errC)
+	}
 	return errC
 }
