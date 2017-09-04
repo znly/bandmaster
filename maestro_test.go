@@ -78,8 +78,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t,
-					&Error{Kind: ErrServiceAlreadyExists, ServiceName: "A"}, err,
-				)
+					&Error{Kind: ErrServiceAlreadyExists, ServiceName: "A"}, err)
 			}
 		}()
 		m.AddService("A", true, NewTestService())
@@ -92,8 +91,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t,
-					&Error{Kind: ErrServiceWithoutBase, ServiceName: "B"}, err,
-				)
+					&Error{Kind: ErrServiceWithoutBase, ServiceName: "B"}, err)
 			}
 		}()
 		m.AddService("B", true, &TestService{})
@@ -105,9 +103,7 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				assert.NotNil(t, err)
 				assert.IsType(t, &Error{}, err)
 				assert.Equal(t, &Error{
-					Kind:        ErrServiceDependsOnItself,
-					ServiceName: "X",
-				}, err)
+					Kind: ErrServiceDependsOnItself, ServiceName: "X"}, err)
 			}
 		}()
 		m.AddService("X", true, NewTestService(), "X")
@@ -167,9 +163,47 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		m.AddService("B", true, NewTestService(), "A")
 		s := NewTestService()
 		m.AddService("C", true, s, "A", "B", "D")
-		err := errors.Cause(<-m.StartAll(context.Background()))
-		errExpected := &Error{Kind: ErrDependencyMissing, Service: s, Dependency: "D"}
-		assert.Equal(t, errExpected, err)
+		errExpected := &Error{
+			Kind: ErrDependencyMissing, Service: s, Dependency: "D"}
+
+		/* heavily cautious parallel status checks */
+		wg1 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			wg1.Add(1)
+			go func() {
+				defer wg1.Done()
+
+				assert.Equal(t, errExpected,
+					errors.Cause(<-m.StartAll(context.Background())))
+
+				select {
+				case <-s.Started():
+					assert.FailNow(t, "shouldn't be here")
+				default:
+					assert.NoError(t, <-s.Stopped())
+				}
+			}()
+		}
+		wg1.Wait()
+
+		/* heavily cautious parallel status checks */
+		wg2 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			wg2.Add(1)
+			go func() {
+				defer wg2.Done()
+
+				assert.NoError(t, <-m.StopAll(context.Background()))
+
+				select {
+				case <-s.Started():
+					assert.FailNow(t, "shouldn't be here")
+				default:
+					assert.NoError(t, <-s.Stopped())
+				}
+			}()
+		}
+		wg2.Wait()
 	})
 
 	t.Run("circular-deps", func(t *testing.T) {
@@ -182,35 +216,80 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		m.AddService("C", true, c, "D")
 		d := NewTestService()
 		m.AddService("D", true, d, "B")
-		err := errors.Cause(<-m.StartAll(context.Background()))
-		assert.IsType(t, &Error{}, err)
-		e := err.(*Error)
-		errExpected := &Error{Kind: ErrDependencyCircular}
-		switch e.Service.Name() {
-		case "A":
-			errExpected.Service = a
-			errExpected.CircularDeps = []string{"A", "D", "B", "A"}
-		case "B":
-			errExpected.Service = b
-			errExpected.CircularDeps = []string{"B", "A", "D", "B"}
-		case "C":
-			errExpected.Service = c
-			errExpected.CircularDeps = []string{"C", "D", "B", "A", "D"}
-		case "D":
-			errExpected.Service = d
-			errExpected.CircularDeps = []string{"D", "B", "A", "D"}
-		default:
-			assert.Fail(t, "should never get here")
+
+		/* heavily cautious parallel status checks */
+		ss := []Service{a, b, c, d}
+		wg1 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			for _, s := range ss {
+				wg1.Add(1)
+				go func(s Service) {
+					defer wg1.Done()
+
+					errExpected := &Error{Kind: ErrDependencyCircular}
+					err := errors.Cause(<-m.StartAll(context.Background()))
+					assert.IsType(t, &Error{}, err)
+					e := err.(*Error)
+					switch e.Service.Name() {
+					case "A":
+						errExpected.Service = a
+						errExpected.CircularDeps = []string{"A", "D", "B", "A"}
+					case "B":
+						errExpected.Service = b
+						errExpected.CircularDeps = []string{"B", "A", "D", "B"}
+					case "C":
+						errExpected.Service = c
+						errExpected.CircularDeps = []string{"C", "D", "B", "A", "D"}
+					case "D":
+						errExpected.Service = d
+						errExpected.CircularDeps = []string{"D", "B", "A", "D"}
+					default:
+						assert.Fail(t, "should never get here")
+					}
+					assert.Equal(t, errExpected, err)
+					assert.False(t, a.started)
+					assert.False(t, a.stopped)
+					assert.False(t, b.started)
+					assert.False(t, b.stopped)
+					assert.False(t, c.started)
+					assert.False(t, c.stopped)
+					assert.False(t, d.started)
+					assert.False(t, d.stopped)
+
+					select {
+					case <-s.Started():
+						assert.FailNow(t, "shouldn't be here")
+					default:
+						assert.NoError(t, <-s.Stopped())
+					}
+				}(s)
+			}
 		}
-		assert.Equal(t, errExpected, err)
-		assert.False(t, a.started)
-		assert.False(t, a.stopped)
-		assert.False(t, b.started)
-		assert.False(t, b.stopped)
-		assert.False(t, c.started)
-		assert.False(t, c.stopped)
-		assert.False(t, d.started)
-		assert.False(t, d.stopped)
+		wg1.Wait()
+		/* heavily cautious parallel status checks */
+		wg2 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			for _, s := range ss {
+				wg2.Add(1)
+				go func(s Service) {
+					defer wg2.Done()
+					select {
+					case <-s.Started():
+						assert.FailNow(t, "shouldn't be here")
+					default:
+						assert.NoError(t, <-s.Stopped())
+					}
+					assert.NoError(t, <-m.StopAll(context.Background()))
+					select {
+					case <-s.Started():
+						assert.FailNow(t, "shouldn't be here")
+					default:
+						assert.NoError(t, <-s.Stopped())
+					}
+				}(s)
+			}
+		}
+		wg2.Wait()
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -225,67 +304,61 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 
 		ctx := context.Background()
 
-		wg := &sync.WaitGroup{}
-		wg.Add(1)
+		wg1 := &sync.WaitGroup{}
+		wg1.Add(1)
 		go func() {
-			defer wg.Done()
+			defer wg1.Done()
 			s := m.ServiceReady(ctx, "C")
 			assert.Equal(t, c, s)
 		}()
 
-		assert.Nil(t, <-m.StartAll(ctx))
-		assert.True(t, a.started)
-		assert.False(t, a.stopped)
-		assert.Nil(t, <-a.Started(ctx))
-		assert.True(t, b.started)
-		assert.False(t, b.stopped)
-		assert.Nil(t, <-b.Started(ctx))
-		assert.True(t, c.started)
-		assert.False(t, c.stopped)
-		assert.Nil(t, <-c.Started(ctx))
+		/* heavily cautious parallel status checks */
+		wg2 := &sync.WaitGroup{}
+		ss := []*TestService{a, b, c}
+		for i := 0; i < 50; i++ {
+			for _, s := range ss {
+				wg2.Add(1)
+				go func(s *TestService) {
+					defer wg2.Done()
 
-		/* idempotency */
-		assert.Nil(t, <-m.StartAll(ctx))
-		assert.True(t, a.started)
-		assert.False(t, a.stopped)
-		assert.Nil(t, <-a.Started(ctx))
-		assert.True(t, b.started)
-		assert.False(t, b.stopped)
-		assert.Nil(t, <-b.Started(ctx))
-		assert.True(t, c.started)
-		assert.False(t, c.stopped)
-		assert.Nil(t, <-c.Started(ctx))
+					assert.Nil(t, <-m.StartAll(ctx))
 
-		assert.Nil(t, <-m.StopAll(ctx))
-		assert.True(t, a.started)
-		assert.True(t, a.stopped)
-		//assert.Nil(t, <-a.Started(ctx))
-		assert.Nil(t, <-a.Stopped(ctx))
-		assert.True(t, b.started)
-		assert.True(t, b.stopped)
-		//assert.Nil(t, <-b.Started(ctx))
-		assert.Nil(t, <-b.Stopped(ctx))
-		assert.True(t, c.started)
-		assert.True(t, c.stopped)
-		//assert.Nil(t, <-c.Started(ctx))
-		assert.Nil(t, <-c.Stopped(ctx))
+					assert.True(t, s.started)
+					assert.False(t, s.stopped)
 
-		/* idempotency */
-		assert.Nil(t, <-m.StopAll(ctx))
-		assert.True(t, a.started)
-		assert.True(t, a.stopped)
-		//assert.Nil(t, <-a.Started(ctx))
-		assert.Nil(t, <-a.Stopped(ctx))
-		assert.True(t, b.started)
-		assert.True(t, b.stopped)
-		//assert.Nil(t, <-b.Started(ctx))
-		assert.Nil(t, <-b.Stopped(ctx))
-		assert.True(t, c.started)
-		assert.True(t, c.stopped)
-		//assert.Nil(t, <-c.Started(ctx))
-		assert.Nil(t, <-c.Stopped(ctx))
+					select {
+					case <-s.Stopped():
+						assert.FailNow(t, "shouldn't be here")
+					default:
+						assert.NoError(t, <-s.Started())
+					}
+				}(s)
+			}
+		}
+		wg1.Wait()
+		wg2.Wait()
+		/* heavily cautious parallel status checks */
+		wg3 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			for _, s := range ss {
+				wg3.Add(1)
+				go func(s *TestService) {
+					defer wg3.Done()
 
-		wg.Wait()
+					assert.Nil(t, <-m.StopAll(ctx))
+
+					assert.True(t, s.started)
+					assert.True(t, s.stopped)
+					select {
+					case <-s.Started():
+						assert.FailNow(t, "shouldn't be here")
+					default:
+						assert.NoError(t, <-s.Stopped())
+					}
+				}(s)
+			}
+		}
+		wg3.Wait()
 	})
 
 	t.Run("retry-backoff", func(t *testing.T) {
@@ -295,31 +368,30 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		a.dontStart = true
 		b := NewTestService()
 		b.dontStart = true
-		m.AddServiceWithBackoff("A", true, 10, time.Millisecond*250, a)
+		m.AddServiceWithBackoff("A", true, 10, time.Millisecond*500, a)
 		m.AddServiceWithBackoff("B", true, 1, time.Millisecond*100, b)
 
 		ctx := context.Background()
 
-		wg := &sync.WaitGroup{}
-		wg.Add(2)
+		wg1 := &sync.WaitGroup{}
+		wg1.Add(2)
 		go func() {
-			defer wg.Done()
+			defer wg1.Done()
 			time.Sleep(time.Second * 2)
 			a.lock.Lock()
 			a.dontStart = false
 			a.lock.Unlock()
-			s := m.ServiceReady(ctx, "A")
-			assert.Equal(t, a, s)
+			assert.Equal(t, a, m.ServiceReady(ctx, "A"))
 		}()
 		go func() {
-			defer wg.Done()
+			defer wg1.Done()
 			time.Sleep(time.Second * 2)
 			b.lock.Lock()
 			b.dontStart = false
 			b.lock.Unlock()
-			s := m.ServiceReady(ctx, "B")
-			assert.Nil(t, s)
-			_ = s
+			ctx1, ctx1cancel := context.WithTimeout(ctx, time.Second*1)
+			assert.Nil(t, m.ServiceReady(ctx1, "B"))
+			ctx1cancel()
 		}()
 		errExpected := &Error{
 			Kind:       ErrServiceStartFailure,
@@ -327,13 +399,24 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 			ServiceErr: _testServiceErrNotAllowedToStart,
 		}
 		assert.Equal(t, errExpected, <-m.StartAll(ctx))
-		wg.Wait()
+		wg1.Wait()
 
-		assert.Nil(t, <-a.Started(ctx))
-		assert.Equal(t, errExpected, <-b.Started(ctx))
+		wg2 := &sync.WaitGroup{}
+		for i := 0; i < 50; i++ {
+			wg2.Add(1)
+			go func() {
+				defer wg2.Done()
 
-		assert.Nil(t, <-m.StopAll(ctx))
-		assert.Nil(t, <-a.Stopped(ctx))
-		assert.Nil(t, <-b.Stopped(ctx))
+				assert.Nil(t, <-m.StopAll(ctx))
+
+				select {
+				case <-a.Started():
+					assert.FailNow(t, "shouldn't be here")
+				default:
+					assert.NoError(t, <-a.Stopped())
+				}
+			}()
+		}
+		wg2.Wait()
 	})
 }
