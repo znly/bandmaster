@@ -147,11 +147,18 @@ func (m *Maestro) ServiceReady(ctx context.Context, name string) Service {
 	if s == nil {
 		return nil
 	}
-	if err := <-s.Started(ctx); err != nil {
-		return nil
-	}
 
-	return s
+	startedC := s.Started()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case err := <-startedC:
+			if err == nil {
+				return s
+			}
+		}
+	}
 }
 
 // -----------------------------------------------------------------------------
@@ -179,7 +186,7 @@ func (m *Maestro) StartAll(ctx context.Context) <-chan error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	errC := make(chan error, len(m.services)+1) // +1 because I don't like surprises
+	errC := make(chan error, len(m.services))
 	defer close(errC)
 
 	zap.L().Debug("looking for missing dependencies...")
@@ -214,17 +221,12 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 
 	/* -- Handling restarts & idempotency, canceled contexts, etc... -- */
 	select {
-	case err := <-base.started: // raw access to started state
-		if err == nil {
-			base.started <- err
-			return nil // idempotency
-		}
+	case <-base.Started():
+		zap.L().Info("service is already running", zap.String("service", s.String()))
+		return nil
 	case <-ctx.Done():
 		return &Error{
-			Kind:       ErrServiceStartFailure,
-			Service:    s,
-			ServiceErr: ctx.Err(),
-		}
+			Kind: ErrServiceStartFailure, Service: s, ServiceErr: ctx.Err()}
 	default: // go on
 	}
 
@@ -235,87 +237,46 @@ func (m *Maestro) start(ctx context.Context, s Service) error {
 	deps := make(map[string]Service, len(base.Dependencies()))
 	for dep := range base.Dependencies() {
 		zap.L().Debug("waiting for dependency to start",
-			zap.String("service", name), zap.String("dependency", dep),
-		)
+			zap.String("service", name), zap.String("dependency", dep))
 		d := m.services[dep]
-		err := <-d.Started(ctx)
+		err := <-d.Started()
 		if err != nil {
 			zap.L().Debug("dependency failed to start",
-				zap.String("service", name), zap.String("dependency", dep),
-			)
+				zap.String("service", name), zap.String("dependency", dep))
 			err = errors.WithStack(&Error{
-				Kind:       ErrDependencyUnavailable,
-				Service:    s,
-				Dependency: dep,
-			})
-			base.started <- err
-			return err
+				Kind: ErrDependencyUnavailable, Service: s, Dependency: dep})
+			return base.start(err)
 		}
 		deps[dep] = d
 		zap.L().Debug("dependency ready",
-			zap.String("service", name), zap.String("dependency", dep),
-		)
+			zap.String("service", name), zap.String("dependency", dep))
 	}
 
 	/* -- Start the actual service `s` -- */
-	base.lock.Lock()
-	var err error
-	errC := make(chan error, 1)
-	go func() { errC <- s.Start(ctx, deps); close(errC) }()
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-	case err = <-errC:
-	}
-	base.lock.Unlock()
+	err := s.Start(ctx, deps)
 	maxRetries, ib := base.RetryConf()
-	attempts := uint(0)
-	for err != nil {
-		attempts++
+	for attempts := uint(1); err != nil; attempts++ {
 		if attempts >= maxRetries {
 			zap.L().Warn("service failed to start",
-				zap.String("service", name), zap.Error(err),
-				zap.Uint("attempt", attempts),
-			)
-			err = &Error{
-				Kind:       ErrServiceStartFailure,
-				Service:    s,
-				ServiceErr: err,
-			}
-			base.started <- err
-			return err
-		} else {
-			msg := fmt.Sprintf("service failed to start, retrying in %v...", ib)
-			zap.L().Info(msg,
-				zap.String("service", name), zap.Error(err),
-				zap.Uint("attempt", attempts),
-			)
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(ib):
-				ib *= 2
-			}
+				zap.String("service", name), zap.Uint("attempts", attempts),
+				zap.Error(err))
+			return base.start(&Error{
+				Kind: ErrServiceStartFailure, Service: s, ServiceErr: err})
 		}
-		base.lock.Lock()
-		errC := make(chan error, 1)
-		go func() { errC <- s.Start(ctx, deps); close(errC) }()
+		zap.L().Info(fmt.Sprintf("service failed to start, retrying in %v...", ib),
+			zap.String("service", name), zap.Uint("attempts", attempts),
+			zap.Error(err))
 		select {
 		case <-ctx.Done():
-			err = ctx.Err()
-		case err = <-errC:
+			return ctx.Err()
+		case <-time.After(ib):
+			ib *= 2
 		}
-		base.lock.Unlock()
-	}
-	base.started <- nil // don't close this channel, ever
-	select {            // successful start -> flush stopped state
-	case <-base.stopped:
-	default:
+		err = s.Start(ctx, deps)
 	}
 
 	zap.L().Info("service successfully started", zap.String("service", s.String()))
-
-	return nil
+	return base.start(nil)
 }
 
 // -----------------------------------------------------------------------------
@@ -364,70 +325,66 @@ func (m *Maestro) stop(ctx context.Context, s Service) error {
 
 	/* -- Handling restarts & idempotency, canceled contexts, etc... -- */
 	select {
-	case err := <-base.stopped: // raw access to stopped state
-		if err == nil {
-			base.stopped <- err
-			return nil // idempotency
-		}
+	case <-base.Stopped():
+		zap.L().Info("service is already stopped", zap.String("service", s.String()))
+		return nil
 	case <-ctx.Done():
 		return &Error{
-			Kind:       ErrServiceStopFailure,
-			Service:    s,
-			ServiceErr: ctx.Err(),
-		}
+			Kind: ErrServiceStopFailure, Service: s, ServiceErr: ctx.Err()}
 	default: // go on
 	}
 
 	name := s.Name()
 	zap.L().Info("stopping service...", zap.String("service", name))
 
-	for dep := range base.Dependencies() {
-		zap.L().Debug("waiting for dependency to stop",
-			zap.String("service", name), zap.String("dependency", dep),
-		)
-		err := <-m.services[dep].Stopped(ctx)
-		if err != nil {
-			zap.L().Debug("dependency failed to stop (ignored)",
-				zap.String("service", name), zap.String("dependency", dep),
-			)
-		} else {
-			zap.L().Debug("dependency stopped",
-				zap.String("service", name), zap.String("dependency", dep),
-			)
+	/* -- Wait for `s`' parents to be shutdown -- */
+	for parentName, parentService := range m.services {
+		pBase := serviceBase(parentService)
+		for pDep := range pBase.directDeps {
+			/* reverse-dep: if that guy depends on me... */
+			if pDep == name {
+				zap.L().Debug("waiting for parent to shutdown",
+					zap.String("service", name), zap.String("parent", parentName))
+				err := <-parentService.Stopped()
+				if err != nil {
+					zap.L().Debug("parent failed to shutdown",
+						zap.String("service", name), zap.String("parent", parentName))
+					err = errors.WithStack(&Error{
+						Kind: ErrParentUnavailable, Service: s, Parent: parentName})
+					return base.stop(err)
+				}
+				zap.L().Debug("parent shutdown",
+					zap.String("service", name), zap.String("parent", parentName))
+			}
 		}
 	}
 
-	base.lock.Lock()
-	var err error
-	errC := make(chan error, 1)
-	go func() { errC <- s.Stop(ctx); close(errC) }()
-	select {
-	case <-ctx.Done():
-		err = ctx.Err()
-	case err = <-errC:
-	}
-	base.lock.Unlock()
-	if err != nil {
-		zap.L().Info("service failed to stop",
-			zap.String("service", name), zap.Error(err),
-		)
-		err = &Error{
-			Kind:       ErrServiceStopFailure,
-			Service:    s,
-			ServiceErr: err,
+	/* -- Stop the actual service `s` -- */
+	err := s.Stop(ctx)
+	maxRetries, ib := base.RetryConf()
+	for attempts := uint(1); err != nil; attempts++ {
+		if attempts >= maxRetries {
+			zap.L().Warn("service failed to stop",
+				zap.String("service", name), zap.Uint("attempts", attempts),
+				zap.Error(err))
+			return base.stop(&Error{
+				Kind: ErrServiceStopFailure, Service: s, ServiceErr: err})
 		}
-		base.stopped <- err
-		return err
-	}
-	base.stopped <- nil // don't close this channel, ever
-	select {            // successful stop -> flush started state
-	case <-base.started:
-	default:
+		zap.L().Info(fmt.Sprintf("service failed to stop, retrying in %v...", ib),
+			zap.String("service", name), zap.Uint("attempts", attempts),
+			zap.Error(err))
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(ib):
+			ib *= 2
+		}
+		err = s.Stop(ctx)
 	}
 
 	zap.L().Info("service successfully stopped", zap.String("service", s.String()))
 
-	return nil
+	return base.stop(err)
 }
 
 // -----------------------------------------------------------------------------

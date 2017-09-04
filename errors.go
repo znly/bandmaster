@@ -38,6 +38,7 @@ const (
 	ErrDependencyMissing     ErrorKind = iota // no such dependency
 	ErrDependencyCircular    ErrorKind = iota // circular dependencies detected
 	ErrDependencyUnavailable ErrorKind = iota // dependency failed to start
+	ErrParentUnavailable     ErrorKind = iota // parent failed to shutdown
 
 	/* runtime */
 	ErrServiceStartFailure ErrorKind = iota // service failed to start
@@ -56,6 +57,7 @@ type Error struct {
 	ServiceErr  error
 
 	Dependency   string
+	Parent       string
 	CircularDeps []string
 }
 
