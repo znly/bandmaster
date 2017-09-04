@@ -38,7 +38,7 @@ import (
 // NOTE: This will panic if `s` is not a `kafka.Service`.
 func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
 	ss := s.(*Service) // allowed to panic
-	if err := <-ss.Started(ctx); err != nil {
+	if err := <-ss.Started(); err != nil {
 		return err
 	}
 
@@ -113,7 +113,7 @@ func WatchConsumerEvents(ctx context.Context, s bandmaster.Service) error {
 // NOTE: This will panic if `s` is not a `kafka.Service`.
 func WatchProducerEvents(ctx context.Context, s bandmaster.Service) error {
 	ss := s.(*Service) // allowed to panic
-	if err := <-ss.Started(ctx); err != nil {
+	if err := <-ss.Started(); err != nil {
 		return err
 	}
 
