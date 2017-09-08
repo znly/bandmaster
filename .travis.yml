@@ -16,10 +16,13 @@ env:
     - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
     #- git config --global url."git@github.com:".insteadOf "https://github.com/"
+    - go get -u github.com/mattn/goveralls
+    - go get -u golang.org/x/tools/cmd/cover
     - go get -u github.com/Masterminds/glide
 install:
     - docker-compose -f test/docker-compose.yml up -d nats kafka es1 es2 es5
     - glide cc
     - glide update -v --force
 script:
-    - go test -v -race -cpu 1,2,4,8 -cover -run=. -bench=. . ./services/...
+    - go test -v -race -cpu 1,2,4,8  -covermode=atomic -coverprofile=coverage1.out -run=. -bench=. . ./services/...
+    - bash coverage.sh
