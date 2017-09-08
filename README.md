@@ -15,7 +15,7 @@ It provides a fully tested & thread-safe package that implements some of the mos
 - dependency-tree semantics to define relationships between services
 - auto-detection of missing & circular dependencies
 - a global, thread-safe service registry so packages and goroutines can safely share clients
-- full support of `context` for clean cancellation of boot & shutdown processes (using e.g. signals)
+- full support of `context` for clean cancellation of the boot & shutdown processes (using e.g. signals)
 - idempotent start & stop methods
 - ...and more!
 
@@ -143,7 +143,7 @@ for i := 0; i < 3; i++ {
 
 // give it 5sec max to stop everything
 ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
-// once the channel returned by StartAll gets closed, we know for a fact
+// once the channel returned by StopAll gets closed, we know for a fact
 // that all of our services (minus the ones that returned an error) are
 // properly shutdown
 for err := range m.StopAll(ctx) {
@@ -181,6 +181,12 @@ It should output the following when ran, explaining pretty straightforwardly wha
 {"level":"info","msg":"service successfully stopped","service":"'mc-x' [required]"}
 ```
 
+You can run this example yourself by typing the following commands:
+```
+$ docker-compose -f test/docker-compose.yml up -d memcached redis
+$ go run example/main.go
+```
+
 ### Implementing a custom service
 
 The simplest way to implement a new service is to copy & modify one of the already existing ones.
@@ -190,13 +196,13 @@ The [`nats`](./services/nats) package is a good starting point for your future i
 
 Services are always composed of 3 files:
 - **env.go**  
-This defines an `Env` structure that handles all of the service's configuration and can easily be converted to its native configuration type (e.g. `nats.Options`).
+This defines an `Env` structure that handles all of the service's configuration and can easily be converted to its native configuration type (e.g. `nats.Options`).  
 Make sure to always provide sane defaults that will ease development in a local environment.
 - **service.go**  
-It defines the actual `Service` structure that plugs into *BandMaster*'s machinery by pseudo-inheriting (embedding) from `bandmaster.ServiceBase`.
+It defines the actual `Service` structure that plugs into *BandMaster*'s machinery by pseudo-inheriting (embedding) from `bandmaster.ServiceBase`.  
 This also defines the self-explanatory `Start` & `Stop` methods, as well as a `Client` (or similarly named) method that allows the caller to retrieve the actual client managed by the service (e.g. `nats.Conn`).
 - **service_test.go**  
-Finally, this plugs the newly implemented service into the generic *BandMaster* test suite via `services.TestService_Generic`.
+Finally, this plugs the newly implemented service into the generic *BandMaster* test suite via `services.TestService_Generic`.  
 These tests will make sure that the service's behavior is consistent with every other services' supported by *BandMaster*, in any circumstances.
 
 
@@ -206,7 +212,7 @@ These tests will make sure that the service's behavior is consistent with every 
 
 ### Logging
 
-*BandMaster* does some logging whenever a service or one of its dependency undergoes a change of state or it anything went wrong; for that, it uses the global logger from Uber's [*Zap*](https://github.com/uber-go/zap) package.
+*BandMaster* does some logging whenever a service or one of its dependency undergoes a change of state or if anything went wrong; for that, it uses the global logger from Uber's [*Zap*](https://github.com/uber-go/zap) package.
 You can thus control the behavior of *BandMaster*'s logger however you like by calling [`zap.ReplaceGlobals`](https://godoc.org/go.uber.org/zap#ReplaceGlobals) at your convenience.
 
 For more information, see *Zap*'s [documentation](https://godoc.org/go.uber.org/zap).
@@ -222,8 +228,8 @@ Also, do not hesitate to open an issue if some piece of documentation looks eith
 
 ### Running tests
 
-```sh
-$ docker-compose -f test/docker-compose.yml up
+```
+$ docker-compose -f test/docker-compose.yml up -d
 $ make test
 ```
 

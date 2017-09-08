@@ -119,7 +119,7 @@ func main() {
 
 	// give it 5sec max to stop everything
 	ctx, _ = context.WithTimeout(context.Background(), time.Second*5)
-	// once the channel returned by StartAll gets closed, we know for a fact
+	// once the channel returned by StopAll gets closed, we know for a fact
 	// that all of our services (minus the ones that returned an error) are
 	// properly shutdown
 	for err := range m.StopAll(ctx) {
