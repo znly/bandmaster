@@ -17,7 +17,6 @@ package cql
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -26,7 +25,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_CQL(t *testing.T) {
-	env, _ := NewEnv(uuid.New().String())
+	env, _ := NewEnv("BM_CQL")
 	assert.NotNil(t, env)
 	conf := env.Config()
 	conf.ProtoVersion = 3 // travis-ci doesn't support 2

@@ -17,7 +17,6 @@ package nats
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
@@ -27,7 +26,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_NATS(t *testing.T) {
-	env, _ := NewEnv(uuid.New().String())
+	env, _ := NewEnv("BM_NATS")
 	assert.NotNil(t, env)
 	conf := env.Config()
 	assert.NotNil(t, conf)

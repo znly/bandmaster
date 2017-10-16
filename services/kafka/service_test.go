@@ -26,7 +26,7 @@ import (
 // -----------------------------------------------------------------------------
 
 func TestService_Kafka(t *testing.T) {
-	env, _ := NewEnv(uuid.New().String())
+	env, _ := NewEnv("BM_KAFKA")
 	assert.NotNil(t, env)
 	conf := env.Config()
 	assert.NotNil(t, conf)
