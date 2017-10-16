@@ -1,0 +1,85 @@
+.PHONY: deps_external tools_external deps test_root test_services tests coverage
+
+DKR_IMG_ID := $(shell git rev-parse --short=7 HEAD)
+DKR_IMG_PATH := localhost:5000/bandmaster/tests/base-go1.9:${DKR_IMG_ID}
+
+deps_external:
+	go get -u github.com/golang/dep/cmd/dep
+	go get -u github.com/znly/linkname-gen
+	go get -u golang.org/x/tools/cmd/stringer
+
+tools_external:
+	go get -u github.com/mattn/goveralls
+	go get -u golang.org/x/tools/cmd/cover
+
+base_dkr:
+	.buildkite/scripts/base.sh $(DKR_IMG_PATH)
+
+pull_dkr:
+	docker pull $(DKR_IMG_PATH)
+
+## Note that we MUST specify an output path for the test binary, otherwise
+## Go 1.9+ will silently strip the symbols during test execution, and break
+## everything in the process.
+## This affects only `go test`, not `go build`, and only on Linux.
+
+test_root:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage1.out .
+
+test_root_dkr: pull_dkr
+	docker run $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. .
+
+test_services_cql:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage2.out ./services/cql
+
+test_services_cql_dkr: pull_dkr
+	docker run -e $(ENV_DKR_CQL) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/cql
+
+test_services_es1:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage3.out ./services/es1
+
+test_services_es1_dkr: pull_dkr
+	docker run -e $(ENV_DKR_ES1) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/es1
+
+test_services_es2:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage4.out ./services/es2
+
+test_services_es2_dkr: pull_dkr
+	docker run -e $(ENV_DKR_ES2) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/es2
+
+test_services_es5:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage5.out ./services/es5
+
+test_services_es5_dkr: pull_dkr
+	docker run -e $(ENV_DKR_ES5) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/es5
+
+test_services_memcached:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage6.out ./services/memcached
+
+test_services_memcached_dkr: pull_dkr
+	docker run -e $(ENV_DKR_MEMCACHED) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/memcached
+
+test_services_redis:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage7.out ./services/redis
+
+test_services_redis_dkr: pull_dkr
+	docker run -e $(ENV_DKR_REDIS) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/redis
+
+test_services_kafka:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage8.out ./services/kafka
+
+test_services_kafka_dkr: pull_dkr
+	docker run -e $(ENV_DKR_KAFKA) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/kafka
+
+test_services_nats:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage9.out ./services/nats
+
+test_services_nats_dkr: pull_dkr
+	docker run -e $(ENV_DKR_NATS) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/nats
+
+tests: test_root test_services_cql test_services_es1 test_services_es2 test_services_es5 test_services_redis test_services_memcached test_services_nats
+
+tests_dkr: test_root_dkr test_services_cql_dkr test_services_es1_dkr test_services_es2_dkr test_services_es5_dkr test_services_redis_dkr test_services_memcached_dkr test_services_nats_dkr
+
+coverage:
+	bash coverage.sh

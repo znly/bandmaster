@@ -9,28 +9,16 @@ sudo: required
 
 language: go
 go:
-    - 1.8
-    - 1.8.3
-    - 1.9
+    - 1.8.4
+    - 1.9.1
 env:
-    - "PATH=/home/travis/gopath/bin:$PATH"
+    - PATH=/home/travis/gopath/bin:$PATH
 before_install:
-    #- git config --global url."git@github.com:".insteadOf "https://github.com/"
-    - go get -u github.com/mattn/goveralls
-    - go get -u golang.org/x/tools/cmd/cover
-    - go get -u github.com/Masterminds/glide
+    - make -f Makefile.ci deps_external
+    - make -f Makefile.ci tools_external
 install:
+    - make -f Makefile deps
     - docker-compose -f test/docker-compose.yml up -d nats kafka es1 es2 es5
-    - glide cc
-    - glide update -v --force
 script:
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage1.out -run=. -bench=. .
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage2.out -run=. -bench=. ./services/cql
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage3.out -run=. -bench=. ./services/es1
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage4.out -run=. -bench=. ./services/es2
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage5.out -run=. -bench=. ./services/es5
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage6.out -run=. -bench=. ./services/kafka
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage7.out -run=. -bench=. ./services/memcached
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage8.out -run=. -bench=. ./services/nats
-    - go test -v -race -cpu 1,2,4,8 -covermode=atomic -coverprofile=coverage9.out -run=. -bench=. ./services/redis
-    - bash coverage.sh
+    - make -f Makefile.ci tests
+    - make -f Makefile.ci coverage

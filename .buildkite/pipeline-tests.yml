@@ -1,0 +1,72 @@
+steps:
+  - command: "make -f Makefile.ci base_dkr"
+    label: "build base image"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=heavy"
+
+  - wait
+
+  - command: "make -f Makefile.ci test_root_dkr"
+    label: "root pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=heavy"
+
+  - command: "make -f Makefile.ci test_services_cql_dkr"
+    label: "services/cql pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_es1_dkr"
+    label: "services/es1 pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_es2_dkr"
+    label: "services/es2 pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_es5_dkr"
+    label: "services/es5 pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_redis_dkr"
+    label: "services/redis pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_memcached_dkr"
+    label: "services/memcached pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_kafka_dkr"
+    label: "services/kafka pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_nats_dkr"
+    label: "services/nats pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
