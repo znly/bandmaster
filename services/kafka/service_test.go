@@ -17,7 +17,6 @@ package kafka
 import (
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/znly/bandmaster"
 	"github.com/znly/bandmaster/services"
@@ -51,7 +50,7 @@ func TestService_Kafka(t *testing.T) {
 }
 
 func TestService_Kafka_ProducerOnly(t *testing.T) {
-	env, _ := NewEnv(uuid.New().String())
+	env, _ := NewEnv("BM_KAFKA")
 	assert.NotNil(t, env)
 	conf := env.Config()
 	assert.NotNil(t, conf)
