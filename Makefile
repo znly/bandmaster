@@ -10,5 +10,6 @@ test:
 
 deps:
 	dep ensure -v
+	dep prune -v
 	go generate .
 	go tool fix -force context -r context . || true
