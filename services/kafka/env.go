@@ -151,6 +151,12 @@ func (v *Version) Decode(vv string) error {
 		*v = Version(sarama.V0_10_0_1)
 	case "V0_10_1_0":
 		*v = Version(sarama.V0_10_1_0)
+	case "V0_10_2_0":
+		*v = Version(sarama.V0_10_2_0)
+	case "V0_11_0_0":
+		*v = Version(sarama.V0_11_0_0)
+	case "V1_0_0_0":
+		*v = Version(sarama.V1_0_0_0)
 	default:
 		return errors.Errorf("`%s`: unsupported version", v)
 	}
@@ -174,6 +180,12 @@ func (v Version) String() string {
 		return "V0_10_0_1"
 	case sarama.V0_10_1_0:
 		return "V0_10_1_0"
+	case sarama.V0_10_2_0:
+		return "V0_10_2_0"
+	case sarama.V0_11_0_0:
+		return "V0_11_0_0"
+	case sarama.V1_0_0_0:
+		return "V1_0_0_0"
 	}
 	return "Unknown"
 }
