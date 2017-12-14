@@ -42,6 +42,7 @@ type Env struct {
 
 	/* Consumer */
 	ConsTopics               []string      `envconfig:"CONS_TOPICS" default:""`
+	ConsMode                 uint8         `envconfig:"CONS_MODE" default:"1"` // ConsumerModePartitions
 	ConsGroupID              string        `envconfig:"CONS_GROUP_ID" default:""`
 	ConsNotifRebalance       bool          `envconfig:"CONS_NOTIF_REBALANCE" default:"true"`
 	ConsNotifError           bool          `envconfig:"CONS_NOTIF_ERROR" default:"true"`
@@ -69,6 +70,14 @@ func (e *Env) Config() *Config {
 
 	/* CONSUMER */
 
+	// By default, messages and errors from the subscribed topics and partitions
+	// are all multiplexed and made available through the consumer's Messages()
+	// and Errors() channels.
+	//
+	// Users who require low-level access can enable ConsumerModePartitions
+	// where individual partitions are exposed on the Partitions() channel.
+	// Messages and errors must then be consumed on the partitions themselves.
+	clusterConf.Group.Mode = sarama_cluster.ConsumerMode(e.ConsMode)
 	// If enabled, rebalance notification will be returned on the
 	// Notifications channel.
 	clusterConf.Group.Return.Notifications = e.ConsNotifRebalance
