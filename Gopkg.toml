@@ -27,7 +27,7 @@
 
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
-  version = "2.*"
+  version = "^2.1.10"
 
 [[constraint]]
   name = "github.com/garyburd/redigo"
