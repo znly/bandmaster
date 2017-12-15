@@ -16,6 +16,7 @@ package kafka
 
 import (
 	"context"
+	"sync"
 
 	"github.com/Shopify/sarama"
 	sarama_cluster "github.com/bsm/sarama-cluster"
@@ -115,13 +116,17 @@ func (s *Service) Stop(context.Context) error {
 		// shutdown process when using ConsumerModePartitions.
 		// Refer to https://github.com/bsm/sarama-cluster/issues/193 for more
 		// information.
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
 		go func() {
 			for range s.c.Partitions() {
 			}
+			wg.Done()
 		}()
 		if err := s.c.Close(); err != nil {
 			return err
 		}
+		wg.Wait()
 		s.c = nil // idempotency & restart support
 	}
 	if s.p != nil {
