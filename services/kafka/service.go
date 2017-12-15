@@ -110,6 +110,15 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 func (s *Service) Stop(context.Context) error {
 	s.canceller()
 	if s.c != nil {
+		// NOTE(cmc): this fixes an issue with `Consumer.Close()` not properly
+		// draining all of its channels, which ends up blocking the entire
+		// shutdown process when using ConsumerModePartitions.
+		// Refer to https://github.com/bsm/sarama-cluster/issues/193 for more
+		// information.
+		go func() {
+			for range s.c.Partitions() {
+			}
+		}()
 		if err := s.c.Close(); err != nil {
 			return err
 		}
