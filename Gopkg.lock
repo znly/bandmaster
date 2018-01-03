@@ -10,8 +10,8 @@
 [[projects]]
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
-  revision = "abf039439f66c1ce78017f560b490612552f6472"
-  version = "v2.1.10"
+  revision = "24016d206c730276dfb58f802999066f2f4bfeaa"
+  version = "v2.1.11"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -39,14 +39,22 @@
 
 [[projects]]
   name = "github.com/garyburd/redigo"
-  packages = ["internal","redis"]
+  packages = [
+    "internal",
+    "redis"
+  ]
   revision = "47dc60e71eed504e3ef8e77ee3c6fe720f3be57f"
   version = "v1.3.0"
 
 [[projects]]
   branch = "master"
   name = "github.com/gocql/gocql"
-  packages = [".","internal/lru","internal/murmur","internal/streams"]
+  packages = [
+    ".",
+    "internal/lru",
+    "internal/murmur",
+    "internal/streams"
+  ]
   revision = "9ce8b08dfa5559eb86592129986654503cf40cf7"
 
 [[projects]]
@@ -69,7 +77,11 @@
 
 [[projects]]
   name = "github.com/nats-io/go-nats"
-  packages = [".","encoders/builtin","util"]
+  packages = [
+    ".",
+    "encoders/builtin",
+    "util"
+  ]
   revision = "29f9728a183bf3fa7e809e14edac00b33be72088"
   version = "v1.3.0"
 
@@ -135,7 +147,14 @@
 
 [[projects]]
   name = "go.uber.org/zap"
-  packages = [".","buffer","internal/bufferpool","internal/color","internal/exit","zapcore"]
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
   revision = "35aad584952c3e7020db7b839f6b102de6271f89"
   version = "v1.7.1"
 
@@ -147,25 +166,37 @@
 
 [[projects]]
   name = "gopkg.in/olivere/elastic.v2"
-  packages = [".","backoff","uritemplates"]
+  packages = [
+    ".",
+    "backoff",
+    "uritemplates"
+  ]
   revision = "cdc8c0afbe6aeeb1b4a99aacb1a8ce9d6f985203"
   version = "v2.0.60"
 
 [[projects]]
   name = "gopkg.in/olivere/elastic.v3"
-  packages = [".","backoff","uritemplates"]
+  packages = [
+    ".",
+    "backoff",
+    "uritemplates"
+  ]
   revision = "b3b762ecb4a4acb9dafd3e0de5ba597a117c83f8"
   version = "v3.0.71"
 
 [[projects]]
   name = "gopkg.in/olivere/elastic.v5"
-  packages = [".","config","uritemplates"]
+  packages = [
+    ".",
+    "config",
+    "uritemplates"
+  ]
   revision = "79ff368708b3a2a9da641dc831d95fd0782bf4ef"
   version = "v5.0.58"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4cc9915ab462c2808c887da9adf644aff7d494a92b9d285a2b154e9bc12ac881"
+  inputs-digest = "c0e08ec5e9597b642de46749c9fb1bdc137596980dcb143b4bb75fd62fc2a1b4"
   solver-name = "gps-cdcl"
   solver-version = 1
