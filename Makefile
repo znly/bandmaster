@@ -4,8 +4,8 @@ toc:
 	docker run --rm -it -v ${PWD}:/usr/src jorgeandrada/doctoc --github
 
 test:
-	staticcheck . ./services/...
 	go vet . ./services/...
+	docker-compose -f ./docker-compose.yml up -d
 	go test -v -cpu 1,4 -run=. -bench=xxx . ./services/...
 
 deps:
