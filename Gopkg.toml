@@ -21,9 +21,9 @@
 #  version = "2.4.0"
 
 
-[[constraint]]
+[[override]]
   name = "github.com/Shopify/sarama"
-  version = "1.*"
+  version = "1.15.*"
 
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"

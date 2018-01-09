@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   name = "github.com/Shopify/sarama"
   packages = ["."]
   revision = "3b1b38866a79f06deddf0487d5c27ba0697ccd65"
@@ -43,8 +49,8 @@
     "internal",
     "redis"
   ]
-  revision = "47dc60e71eed504e3ef8e77ee3c6fe720f3be57f"
-  version = "v1.3.0"
+  revision = "d1ed5c67e5794de818ea85e6b522fda02623a484"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -55,7 +61,7 @@
     "internal/murmur",
     "internal/streams"
   ]
-  revision = "9ce8b08dfa5559eb86592129986654503cf40cf7"
+  revision = "6c01199a66689472d8fab787edda1edefc0f4a79"
 
 [[projects]]
   branch = "master"
@@ -82,8 +88,8 @@
     "encoders/builtin",
     "util"
   ]
-  revision = "29f9728a183bf3fa7e809e14edac00b33be72088"
-  version = "v1.3.0"
+  revision = "d66cb54e6b7bdd93f0b28afc8450d84c780dfb68"
+  version = "v1.4.0"
 
 [[projects]]
   name = "github.com/nats-io/nuid"
@@ -94,8 +100,8 @@
 [[projects]]
   name = "github.com/pierrec/lz4"
   packages = ["."]
-  revision = "08c27939df1bd95e881e2c2367a749964ad1fceb"
-  version = "v1.0.1"
+  revision = "2fcda4cb7018ce05a25959d2fe08c83e3329f169"
+  version = "v1.1"
 
 [[projects]]
   name = "github.com/pierrec/xxHash"
@@ -130,8 +136,8 @@
 [[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
-  revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
-  version = "v1.1.4"
+  revision = "b91bfb9ebec76498946beb6af7c0230c7cc7ba6c"
+  version = "v1.2.0"
 
 [[projects]]
   name = "go.uber.org/atomic"
@@ -191,12 +197,12 @@
     "config",
     "uritemplates"
   ]
-  revision = "79ff368708b3a2a9da641dc831d95fd0782bf4ef"
-  version = "v5.0.58"
+  revision = "ef745defcdcc081f19c499930dc12c7a6cb638b4"
+  version = "v5.0.60"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c0e08ec5e9597b642de46749c9fb1bdc137596980dcb143b4bb75fd62fc2a1b4"
+  inputs-digest = "9b59a7653f74d3c174b7d9b0b0e6af802091c1cdaced5e728d4ebb47beebd6e2"
   solver-name = "gps-cdcl"
   solver-version = 1
