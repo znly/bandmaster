@@ -19,7 +19,70 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 )
+
+// -----------------------------------------------------------------------------
+
+// ServiceProperties embeds all the BandMaster-specific properties that a Service
+// can have, such as its name, its dependencies and its retry-policy.
+//
+// In BandMaster, configuration is all about environment variables, and
+// ServiceProperties are no exception: Properties of a Service are always
+// exposed as environment variables.
+// See NewServiceProperties documentation for more information.
+type ServiceProperties struct {
+	// Name is the unique name that identifies the Service as part of the
+	// general dependency tree (i.e. other services will reference it using this
+	// name).
+	Name string `envconfig:"NAME" default:""`
+	// Dependencies specify the *direct* dependencies of the Service, using
+	// their respective Names (see 'Name').
+	// You do NOT need to specify indirect dependencies, those will be
+	// automagically computed for you.
+	//
+	// You're free to indicate the names of dependencies that haven't been
+	// registered yet: the final dependency-tree is only computed once
+	// your Maestro's StartAll is called.
+	Dependencies []string `envconfig:"DEPENDENCIES" default:""`
+	// Required marks the Service as required, which can be a helpful indicator
+	// as to whether or not you can safely ignore some errors that might happen
+	// later on.
+	Required bool `envconfig:"REQUIRED" default:"false"`
+
+	// BackoffMaxRetries defines the maximum number of times that the Service
+	// will try to boot, if and when it failed to do so for any reason.
+	//
+	// A value of 0, the default, disables retrying & exponential backoff.
+	BackoffMaxRetries uint `envconfig:"BACKOFF_MAX_RETRIES" default:"0"`
+	// BackoffInitialDuration defines the initial sleep duration used by the
+	// exponential backoff machinery.
+	//
+	// It gets multiplied by 2 after each unsuccessful retry.
+	BackoffInitialDuration time.Duration `envconfig:"BACKOFF_INITIAL_DURATION" default:"1s"`
+}
+
+// NewServiceProperties creates a new set of properties for the Service of the
+// given name.
+//
+// In BandMaster, configuration is all about environment variables, and
+// ServiceProperties are no exception.
+// When you ask for a new set of ServiceProperties for your service, they
+// immediately become available through the environment using
+// '${TO_UPPER(NAME)}_PROP_' as a prefix.
+//
+// E.g., after calling `NewServiceProperties("mysvc")`, you'll be able to
+// configure 'mysvc' retry-policy via the MYSVC_PROP_BACKOFF_MAX_RETRIES envvar.
+func NewServiceProperties(name string) (*ServiceProperties, error) {
+	sp := ServiceProperties{}
+	if err := envconfig.Process(name+"_PROP", &sp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	sp.Name = name // NOTE(cmc): keep this *after* env-processing!
+	return &sp, nil
+}
 
 // -----------------------------------------------------------------------------
 
