@@ -74,36 +74,34 @@ func NewMaestro() *Maestro {
 
 // -----------------------------------------------------------------------------
 
-// AddService registers a Service with the Maestro.
+// AddService registers a Service with the Maestro using the given name.
 //
-// The direct dependencies of this service can be specified using the names
-// with which they were themselves registered. You do NOT need to specify its
-// indirect dependencies.
-// You're free to indicate the names of dependencies that haven't been
-// registered yet: the final dependency-tree is only computed at StartAll()
-// time.
+// A set of ServiceProperties will automatically be generated for this service
+// using the default values defined in the struct-tags of ServiceProperties.
+// As always, these defaults are overridable from the environment using
+// ${TO_UPPER(NAME)}_PROP_${PROP_NAME} as key.
 //
-// The specified `req` boolean marks the service as required; which can be a
-// helpful indicator as to whether you can afford to ignore some errors that
-// might happen later on.
-func (m *Maestro) AddService(name string, req bool, s Service, deps ...string) {
-	m.AddServiceWithBackoff(name, req, 0, 0, s, deps...)
+// See ServiceProperties documentation for more information.
+func (m *Maestro) AddService(s Service, name string) {
+	props, err := NewServiceProperties(name)
+	if err != nil {
+		panic(&Error{Kind: ErrServicePropsInvalid, ServiceName: name})
+	}
+	m.AddServiceWithProperties(s, props)
 }
 
-// AddServiceWithBackoff is an enhanced version of AddService that allows to
-// configure exponential backoff in case of failures to boot.
+// AddServiceWithProperties registers a Service with the Maestro using the given
+// properties.
 //
-// `maxRetries` defines the maximum number of times that the service will try
-// to boot; while `initialBackoff` specifies the initial sleep-time before
-// each retry.
-func (m *Maestro) AddServiceWithBackoff(
-	name string, req bool,
-	maxRetries uint, initialBackoff time.Duration,
-	s Service, deps ...string,
-) {
+// You can still override these properties from the environment using
+// ${TO_UPPER(NAME)}_PROP_${PROP_NAME} as key.
+//
+// See ServiceProperties documentation for more information.
+func (m *Maestro) AddServiceWithProperties(s Service, props *ServiceProperties) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	name := props.Name
 	if _, ok := m.services[name]; ok {
 		panic(&Error{Kind: ErrServiceAlreadyExists, ServiceName: name})
 	}
@@ -117,9 +115,9 @@ func (m *Maestro) AddServiceWithBackoff(
 	}
 
 	base.setName(name)
-	base.setRequired(req)
-	base.setRetryConf(maxRetries, initialBackoff)
-	base.addDependency(deps...)
+	base.setRequired(props.Required)
+	base.setRetryConf(props.BackoffMaxRetries, props.BackoffInitialDuration)
+	base.addDependency(props.Dependencies...)
 
 	m.services[name] = s
 }
