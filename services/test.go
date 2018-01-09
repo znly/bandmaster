@@ -32,7 +32,12 @@ func TestService_Generic(t *testing.T, s bandmaster.Service,
 	assert.NotNil(t, s)
 
 	m := bandmaster.NewMaestro()
-	m.AddServiceWithBackoff("A", true, 10, time.Millisecond*200, s)
+	props, _ := bandmaster.NewServiceProperties("A")
+	props.Required = true
+	props.Backoff = true
+	props.BackoffMaxRetries = 10
+	props.BackoffInitialDuration = time.Millisecond * 200
+	m.AddServiceWithProperties(s, props)
 	select {
 	case <-s.Started():
 		assert.FailNow(t, "shouldn't be here")

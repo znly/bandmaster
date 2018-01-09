@@ -118,6 +118,7 @@ type Service interface {
 type ServiceBase struct {
 	lock *sync.RWMutex
 
+	// TODO(cmc): replace these with ServiceProperties now?
 	name           string
 	required       bool
 	retries        uint

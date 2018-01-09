@@ -33,6 +33,7 @@ const (
 	ErrServiceWithoutBase         ErrorKind = iota // service must inherit form ServiceBase
 	ErrServiceDependsOnItself     ErrorKind = iota // service depends on its own self
 	ErrServiceDuplicateDependency ErrorKind = iota // service has duplicate dependencies
+	ErrServicePropsInvalid        ErrorKind = iota // couldn't parse service properties from environment
 
 	/* dependencies */
 	ErrDependencyMissing     ErrorKind = iota // no such dependency
