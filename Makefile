@@ -5,7 +5,7 @@ toc:
 
 test:
 	go vet . ./services/...
-	docker-compose -f ./docker-compose.yml up -d
+	docker-compose -p zenly -f ./docker-compose.yml up -d
 	go test -v -cpu 1,4 -run=. -bench=xxx . ./services/...
 
 deps:
