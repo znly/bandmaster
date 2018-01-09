@@ -81,8 +81,11 @@ func TestMaestro_AddService_Service(t *testing.T) {
 					&Error{Kind: ErrServiceAlreadyExists, ServiceName: "A"}, err)
 			}
 		}()
-		m.AddService("A", true, NewTestService())
-		m.AddService("A", false, NewTestService())
+		props, _ := NewServiceProperties("A")
+		props.Required = true
+		m.AddServiceWithProperties(NewTestService(), props)
+		props.Required = false
+		m.AddServiceWithProperties(NewTestService(), props)
 	})
 
 	t.Run("must-inherit", func(t *testing.T) {
@@ -94,7 +97,9 @@ func TestMaestro_AddService_Service(t *testing.T) {
 					&Error{Kind: ErrServiceWithoutBase, ServiceName: "B"}, err)
 			}
 		}()
-		m.AddService("B", true, &TestService{})
+		props, _ := NewServiceProperties("B")
+		props.Required = true
+		m.AddServiceWithProperties(&TestService{}, props)
 	})
 
 	t.Run("depends-on-itself", func(t *testing.T) {
@@ -106,7 +111,10 @@ func TestMaestro_AddService_Service(t *testing.T) {
 					Kind: ErrServiceDependsOnItself, ServiceName: "X"}, err)
 			}
 		}()
-		m.AddService("X", true, NewTestService(), "X")
+		props, _ := NewServiceProperties("X")
+		props.Required = true
+		props.Dependencies = []string{"X"}
+		m.AddServiceWithProperties(NewTestService(), props)
 	})
 
 	t.Run("duplicate-dependency", func(t *testing.T) {
@@ -121,12 +129,17 @@ func TestMaestro_AddService_Service(t *testing.T) {
 				}, err)
 			}
 		}()
-		m.AddService("X", true, NewTestService(), "B", "B")
+		props, _ := NewServiceProperties("X")
+		props.Required = true
+		props.Dependencies = []string{"B", "B"}
+		m.AddServiceWithProperties(NewTestService(), props)
 	})
 
 	t.Run("success", func(t *testing.T) {
 		s := NewTestService()
-		m.AddService("B", true, s)
+		props, _ := NewServiceProperties("B")
+		props.Required = true
+		m.AddServiceWithProperties(s, props)
 		assert.Equal(t, s, m.Service("B"))
 	})
 
@@ -146,7 +159,9 @@ func TestMaestro_AddService_Service(t *testing.T) {
 					default:
 						s := NewTestService()
 						name := strconv.Itoa(ii) + strconv.Itoa(int(rand.Int63()))
-						m.AddService(name, true, s)
+						props, _ := NewServiceProperties(name)
+						props.Required = true
+						m.AddServiceWithProperties(s, props)
 						assert.Equal(t, s, m.Service(name))
 					}
 				}
@@ -159,10 +174,18 @@ func TestMaestro_AddService_Service(t *testing.T) {
 func TestMaestro_StartAll_StopAll(t *testing.T) {
 	t.Run("missing-deps", func(t *testing.T) {
 		m := NewMaestro()
-		m.AddService("A", true, NewTestService())
-		m.AddService("B", true, NewTestService(), "A")
+		props, _ := NewServiceProperties("A")
+		props.Required = true
+		m.AddServiceWithProperties(NewTestService(), props)
+		props, _ = NewServiceProperties("B")
+		props.Required = true
+		props.Dependencies = []string{"A"}
+		m.AddServiceWithProperties(NewTestService(), props)
 		s := NewTestService()
-		m.AddService("C", true, s, "A", "B", "D")
+		props, _ = NewServiceProperties("C")
+		props.Required = true
+		props.Dependencies = []string{"A", "B", "D"}
+		m.AddServiceWithProperties(s, props)
 		errExpected := &Error{
 			Kind: ErrDependencyMissing, Service: s, Dependency: "D"}
 
@@ -208,14 +231,30 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 
 	t.Run("circular-deps", func(t *testing.T) {
 		m := NewMaestro()
+
 		a := NewTestService()
-		m.AddService("A", true, a, "D")
+		props, _ := NewServiceProperties("A")
+		props.Required = true
+		props.Dependencies = []string{"D"}
+		m.AddServiceWithProperties(a, props)
+
 		b := NewTestService()
-		m.AddService("B", true, b, "A")
+		props, _ = NewServiceProperties("B")
+		props.Required = true
+		props.Dependencies = []string{"A"}
+		m.AddServiceWithProperties(b, props)
+
 		c := NewTestService()
-		m.AddService("C", true, c, "D")
+		props, _ = NewServiceProperties("C")
+		props.Required = true
+		props.Dependencies = []string{"D"}
+		m.AddServiceWithProperties(c, props)
+
 		d := NewTestService()
-		m.AddService("D", true, d, "B")
+		props, _ = NewServiceProperties("D")
+		props.Required = true
+		props.Dependencies = []string{"B"}
+		m.AddServiceWithProperties(d, props)
 
 		/* heavily cautious parallel status checks */
 		ss := []Service{a, b, c, d}
@@ -296,11 +335,21 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 		m := NewMaestro()
 
 		a := NewTestService()
-		m.AddService("A", true, a)
+		props, _ := NewServiceProperties("A")
+		props.Required = true
+		m.AddServiceWithProperties(a, props)
+
 		b := NewTestService()
-		m.AddService("B", true, b, "A")
+		props, _ = NewServiceProperties("B")
+		props.Required = true
+		props.Dependencies = []string{"A"}
+		m.AddServiceWithProperties(b, props)
+
 		c := NewTestService()
-		m.AddService("C", true, c, "A", "B")
+		props, _ = NewServiceProperties("C")
+		props.Required = true
+		props.Dependencies = []string{"A", "B"}
+		m.AddServiceWithProperties(c, props)
 
 		ctx := context.Background()
 
@@ -366,10 +415,21 @@ func TestMaestro_StartAll_StopAll(t *testing.T) {
 
 		a := NewTestService()
 		a.dontStart = true
+		props, _ := NewServiceProperties("A")
+		props.Required = true
+		props.Backoff = true
+		props.BackoffMaxRetries = 10
+		props.BackoffInitialDuration = time.Millisecond * 500
+		m.AddServiceWithProperties(a, props)
+
 		b := NewTestService()
 		b.dontStart = true
-		m.AddServiceWithBackoff("A", true, 10, time.Millisecond*500, a)
-		m.AddServiceWithBackoff("B", true, 1, time.Millisecond*100, b)
+		props, _ = NewServiceProperties("B")
+		props.Required = true
+		props.Backoff = true
+		props.BackoffMaxRetries = 1
+		props.BackoffInitialDuration = time.Millisecond * 100
+		m.AddServiceWithProperties(b, props)
 
 		ctx := context.Background()
 
