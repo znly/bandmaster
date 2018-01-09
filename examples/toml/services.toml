@@ -1,0 +1,29 @@
+## This is the exact same configuration that was hand-coded in ../simple/main.go.
+## It will generate the same environment variables and service properties.
+
+[[ services.memcached.mc-1 ]]
+	[[ services.memcached.mc-1.properties ]]
+		required = "true"
+		dependencies = "rd-1"
+
+[[ services.memcached.mc-2 ]]
+
+[[ services.memcached.mc-3 ]]
+	[[ services.memcached.mc-3.properties ]]
+		required = "true"
+		dependencies = "mc-2"
+
+[[ services.redis.rd-1 ]]
+	[[ services.redis.rd-1.properties ]]
+		required = "true"
+		dependencies = "mc-3"
+
+[[ services.memcached.mc-x ]]
+	[[ services.memcached.mc-x.env ]]
+		addrs = "localhost:0"
+	[[ services.memcached.mc-x.properties ]]
+		required = "true"
+		dependencies = "mc-1,mc-2,mc-3,rd-1"
+		backoff = "true"
+		backoff_max_retries = "3"
+		backoff_initial_duration = "100ms"
