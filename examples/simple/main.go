@@ -34,7 +34,7 @@ import (
 /* This example expects a memcached as well as a redis instance to be
  * up & running, respectively listening on 'localhost:11211' & 'localhost:6379'.
  *
- * docker-compose -f ../test/docker-compose.yml up -d redis memcached
+ * docker-compose -f ../docker-compose.yml up -d redis memcached
  *
  */
 
@@ -65,24 +65,36 @@ func main() {
 
 	// add a memcached service called 'mc-1' that depends on 'rd-1' which
 	// does not yet exist
-	m.AddService("mc-1", true, bm_memcached.New(memcachedEnv.Config()), "rd-1")
+	props, _ := bandmaster.NewServiceProperties("mc-1")
+	props.Required = true
+	props.Dependencies = []string{"rd-1"}
+	m.AddServiceWithProperties(bm_memcached.New(memcachedEnv.Config()), props)
 	// add a memcached service called 'mc-2' with no dependencies
-	m.AddService("mc-2", false, bm_memcached.New(memcachedEnv.Config()))
+	m.AddService(bm_memcached.New(memcachedEnv.Config()), "mc-2")
 	// add a memcached service called 'mc-3' that depends on 'mc-2'
-	m.AddService("mc-3", true, bm_memcached.New(memcachedEnv.Config()), "mc-2")
+	props, _ = bandmaster.NewServiceProperties("mc-3")
+	props.Required = true
+	props.Dependencies = []string{"mc-2"}
+	m.AddServiceWithProperties(bm_memcached.New(memcachedEnv.Config()), props)
 	// add a redis service called 'rd-1' that depends on 'mc-3', and hence
 	// also indirectly depends on on 'mc-2'
-	m.AddService("rd-1", true, bm_redis.New(redisEnv.Config()), "mc-3")
+	props, _ = bandmaster.NewServiceProperties("rd-1")
+	props.Required = true
+	props.Dependencies = []string{"mc-3"}
+	m.AddServiceWithProperties(bm_redis.New(redisEnv.Config()), props)
 
 	// add a final memcached service called 'mc-x' that just directly depends
 	// on everything else, cannot possibly boot successfully, and has some
 	// exponential backoff configured
 	conf := memcachedEnv.Config()
 	conf.Addrs = []string{"localhost:0"}
-	m.AddServiceWithBackoff(
-		"mc-x", true,
-		3, time.Millisecond*100, bm_memcached.New(conf),
-		"mc-1", "mc-2", "mc-3", "rd-1")
+	props, _ = bandmaster.NewServiceProperties("mc-x")
+	props.Required = true
+	props.Dependencies = []string{"mc-1", "mc-2", "mc-3", "rd-1"}
+	props.Backoff = true
+	props.BackoffMaxRetries = 3
+	props.BackoffInitialDuration = time.Millisecond * 100
+	m.AddServiceWithProperties(bm_memcached.New(conf), props)
 
 	/* Obviously, memcached instances depending on other memcached instances
 	 * doesn't make any kind of sense, but that's just for the sake of example
