@@ -18,7 +18,7 @@ before_install:
     - make -f Makefile.ci tools_external
 install:
     - make -f Makefile deps
-    - docker-compose -f docker-compose.yml up -d nats kafka es1 es2 es5
+    - docker-compose -f docker-compose.yml up -d nats kafka es1 es2 es5 sql
 script:
     - make -f Makefile.ci tests
     - make -f Makefile.ci coverage

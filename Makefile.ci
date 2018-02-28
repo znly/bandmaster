@@ -77,9 +77,15 @@ test_services_nats:
 test_services_nats_dkr: pull_dkr
 	docker run -e $(ENV_DKR_NATS) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/nats
 
-tests: test_root test_services_cql test_services_es1 test_services_es2 test_services_es5 test_services_redis test_services_memcached test_services_nats
+test_services_sql:
+	go test -v -race -cpu 1,4 -run=. -bench=. -covermode=atomic -coverprofile=coverage9.out ./services/sql
 
-tests_dkr: test_root_dkr test_services_cql_dkr test_services_es1_dkr test_services_es2_dkr test_services_es5_dkr test_services_redis_dkr test_services_memcached_dkr test_services_nats_dkr
+test_services_sql_dkr: pull_dkr
+	docker run -e $(ENV_DKR_SQL) $(DKR_IMG_PATH) go test -v -race -cpu 1,4 -run=. -bench=. ./services/sql
+
+tests: test_root test_services_cql test_services_es1 test_services_es2 test_services_es5 test_services_redis test_services_memcached test_services_nats test_services_sql
+
+tests_dkr: test_root_dkr test_services_cql_dkr test_services_es1_dkr test_services_es2_dkr test_services_es5_dkr test_services_redis_dkr test_services_memcached_dkr test_services_nats_dkr test_services_sql_dkr
 
 coverage:
 	bash coverage.sh

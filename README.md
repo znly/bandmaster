@@ -28,6 +28,7 @@ It provides a fully tested & thread-safe package that implements some of the mos
 - ElasticSearch-v1 via [gopkg.in/olivere/elastic.v2](https://gopkg.in/olivere/elastic.v2)
 - ElasticSearch-v2 via [gopkg.in/olivere/elastic.v3](https://gopkg.in/olivere/elastic.v3)
 - ElasticSearch-v5 via [gopkg.in/olivere/elastic.v5](https://gopkg.in/olivere/elastic.v5)
+- Generic SQL via [golang.org/pkg/database/sql](https://golang.org/pkg/database/sql/)
 
 Any of these services would be configured and instanciated the exact same way:
 ```Go
@@ -39,6 +40,7 @@ Any of these services would be configured and instanciated the exact same way:
 	es1Env, _ := bm_es1.NewEnv("ES1_EXAMPLE")
 	es2Env, _ := bm_es2.NewEnv("ES2_EXAMPLE")
 	es5Env, _ := bm_es5.NewEnv("ES5_EXAMPLE")
+	sqlEnv, _ := bm_sql.NewEnv("SQL_EXAMPLE")
 
 	m.AddService("mc-1", true, bm_memcached.New(memcachedEnv.Config()))
 	m.AddService("rd-1", true, bm_redis.New(redisEnv.Config()))
@@ -48,6 +50,7 @@ Any of these services would be configured and instanciated the exact same way:
 	m.AddService("es1-1", true, bm_es1.New(es1Env.Config()))
 	m.AddService("es2-1", true, bm_es2.New(es2Env.Config()))
 	m.AddService("es5-1", true, bm_es5.New(es5Env.Config()))
+	m.AddService("sql-1", true, bm_sql.New(sqlEnv.Config()))
 ```
 
 In addition to these standard implementations, *BandMaster* provides a straightforward API so that you can easily implement your own services; see [this section](#implementing-a-custom-service) for more details.
@@ -229,7 +232,7 @@ Also, do not hesitate to open an issue if some piece of documentation looks eith
 ### Running tests
 
 ```
-$ docker-compose -f test/docker-compose.yml up -d
+$ docker-compose -f docker-compose.yml up -d
 $ make test
 ```
 

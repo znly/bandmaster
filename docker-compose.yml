@@ -52,3 +52,11 @@ services:
         ports:
             - "9205:9200"
         restart: on-failure
+
+    sql:
+        image: postgres
+        environment:
+            POSTGRES_PASSWORD: postgres
+        ports:
+            - "5432:5432"
+        restart: on-failure

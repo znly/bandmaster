@@ -70,3 +70,10 @@ steps:
       - "docker=true"
       - "os=linux"
       - "type=lite"
+
+  - command: "make -f Makefile.ci test_services_sql_dkr"
+    label: "services/sql pkg"
+    agents:
+      - "docker=true"
+      - "os=linux"
+      - "type=lite"
