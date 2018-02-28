@@ -72,3 +72,7 @@
 [[constraint]]
   name = "gopkg.in/olivere/elastic.v5"
   version = "5.*"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/lib/pq"

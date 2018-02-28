@@ -200,3 +200,9 @@
   inputs-digest = "c0e08ec5e9597b642de46749c9fb1bdc137596980dcb143b4bb75fd62fc2a1b4"
   solver-name = "gps-cdcl"
   solver-version = 1
+
+  [[projects]]
+  branch = "master"
+  name = "github.com/lib/pq"
+  packages = ["."]
+  revision = "88edab0803230a3898347e77b474f8c1820a1f20"
