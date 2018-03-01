@@ -9,8 +9,8 @@ sudo: required
 
 language: go
 go:
-    - 1.8.4
-    - 1.9.2
+    - "1.9.4"
+    - "1.10"
 env:
     - PATH=/home/travis/gopath/bin:$PATH
 before_install:
@@ -18,7 +18,7 @@ before_install:
     - make -f Makefile.ci tools_external
 install:
     - make -f Makefile deps
-    - docker-compose -f test/docker-compose.yml up -d nats kafka es1 es2 es5
+    - docker-compose -f docker-compose.yml up -d nats kafka es1 es2 es5
 script:
     - make -f Makefile.ci tests
     - make -f Makefile.ci coverage
