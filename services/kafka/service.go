@@ -16,6 +16,7 @@ package kafka
 
 import (
 	"context"
+	"time"
 
 	"github.com/Shopify/sarama"
 	sarama_cluster "github.com/bsm/sarama-cluster"
@@ -34,17 +35,19 @@ type Service struct {
 
 	conf *Config
 
-	c *sarama_cluster.Consumer
-	p sarama.AsyncProducer
+	clients   []*sarama_cluster.Client
+	lastBoot  time.Time
+	curClient uint
 }
 
 // Config contains the necessary configuration for a Kafka service.
+//
+// TODO(cmc): explain NB_CLIENTS
 type Config struct {
 	ClusterConf *sarama_cluster.Config
 
-	Addrs           []string
-	ConsumerTopics  []string
-	ConsumerGroupID string
+	Addrs     []string
+	NbClients uint
 }
 
 // New creates a new Kafka service using the provided configuration.
@@ -61,15 +64,16 @@ func New(conf *Config) bandmaster.Service {
 		ctx:       ctx,
 		canceller: canceller,
 
-		conf: conf,
+		conf:      conf,
+		curClient: 0,
 	}
 }
 
 // -----------------------------------------------------------------------------
 
-// Start checks the validity of the configuration then creates a new Kafka
-// consumer as well as an asynchronous producer: if everything goes smoothly,
-// the service is marked as 'started'; otherwise, an error is returned.
+// Start checks the validity of the configuration then creates a total of
+// NB_CLIENTS Kafka clients: if everything goes smoothly, the service is marked
+// as 'started'; otherwise, an error is returned.
 //
 //
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
@@ -79,71 +83,130 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 	if err = s.conf.ClusterConf.Validate(); err != nil {
 		return err
 	}
-	if s.c == nil { // idempotency
-		if len(s.conf.ConsumerGroupID) > 0 && len(s.conf.ConsumerTopics) > 0 {
-			s.c, err = sarama_cluster.NewConsumer(s.conf.Addrs,
-				s.conf.ConsumerGroupID, s.conf.ConsumerTopics, s.conf.ClusterConf,
-			)
+	if s.clients == nil { // idempotency
+		for i := 0; i < int(s.conf.NbClients); i++ {
+			c, err := sarama_cluster.NewClient(s.conf.Addrs, s.conf.ClusterConf)
 			if err != nil {
 				return err
 			}
-		}
-	}
-	if s.p == nil { // idempotency
-		s.p, err = sarama.NewAsyncProducer(
-			s.conf.Addrs, &s.conf.ClusterConf.Config)
-		if err != nil {
-			return err
+			s.clients = append(s.clients, c)
+			s.lastBoot = time.Now()
 		}
 	}
 
 	return nil
 }
 
-// Stop closes the underlying Kafka producer & consumer: if everything goes
-// smoothly, the service is marked as 'stopped'; otherwise, an error is
-// returned.
+// Stop closes the underlying Kafka clients: if everything goes smoothly, the
+// service is marked as 'stopped'; otherwise, an error is returned.
 //
 //
 // Stop is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
 func (s *Service) Stop(context.Context) error {
 	s.canceller()
-	if s.c != nil {
-		if err := s.c.Close(); err != nil {
-			return err
+	if s.clients != nil {
+		// TODO(cmc): document this mess
+		if time.Since(s.lastBoot) < time.Second {
+			time.Sleep(time.Second)
 		}
-		s.c = nil // idempotency & restart support
-	}
-	if s.p != nil {
-		if err := s.p.Close(); err != nil {
-			return err
+		for i := int(s.curClient - 1); i >= 0; i-- {
+			if err := s.clients[i].Close(); err != nil {
+				return err
+			}
+			s.curClient--
 		}
-		s.c = nil // idempotency & restart support
+		s.clients = nil // idempotency & restart support
 	}
 	return nil
 }
 
 // -----------------------------------------------------------------------------
 
-// Consumer returns the underlying Kafka consumer of the given service.
+// Consumer creates and returns a clustered Kafka consumer using one of the
+// still available underlying clients.
+// It will return nil if all of the underlying clients are already in use.
 //
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
 // NOTE: This will panic if `s` is not a `kafka.Service`.
-func Consumer(s bandmaster.Service) *sarama_cluster.Consumer {
-	return s.(*Service).c // allowed to panic
+func Consumer(
+	s bandmaster.Service,
+	groupID string,
+	topics ...string,
+) *sarama_cluster.Consumer {
+	service := s.(*Service) // allowed to panic
+	if service.clients == nil {
+		return nil
+	}
+
+	if service.curClient < uint(len(service.clients)) {
+		client := service.clients[service.curClient]
+		cons, err := sarama_cluster.NewConsumerFromClient(client,
+			groupID, topics)
+		if err != nil {
+			panic(err)
+		}
+		service.curClient++
+		return cons
+	}
+
+	return nil
 }
 
-// Producer returns the underlying Kafka async-producer of the given service.
+// AsyncProducer creates and returns an async Kafka producer using one of the
+// still available underlying clients.
+// It will return nil if all of the underlying clients are already in use.
 //
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
 // NOTE: This will panic if `s` is not a `kafka.Service`.
-func Producer(s bandmaster.Service) sarama.AsyncProducer {
-	return s.(*Service).p // allowed to panic
+func AsyncProducer(s bandmaster.Service) sarama.AsyncProducer {
+	service := s.(*Service) // allowed to panic
+	if service.clients == nil {
+		return nil
+	}
+
+	if service.curClient < uint(len(service.clients)) {
+		client := service.clients[service.curClient]
+		prod, err := sarama.NewAsyncProducerFromClient(client.Client)
+		if err != nil {
+			panic(err) // TODO(cmc)
+		}
+		service.curClient++
+		return prod
+	}
+
+	return nil
+}
+
+// SyncProducer creates and returns an async Kafka producer using one of the
+// still available underlying clients.
+// It will return nil if all of the underlying clients are already in use.
+//
+// It assumes that the service is ready; i.e. it might return nil if it's
+// actually not.
+//
+// NOTE: This will panic if `s` is not a `kafka.Service`.
+func SyncProducer(s bandmaster.Service) sarama.SyncProducer {
+	service := s.(*Service) // allowed to panic
+	if service.clients == nil {
+		return nil
+	}
+
+	if service.curClient < uint(len(service.clients)) {
+		client := service.clients[service.curClient]
+		service.curClient++
+		prod, err := sarama.NewSyncProducerFromClient(client.Client)
+		if err != nil {
+			panic(err) // TODO(cmc)
+		}
+		return prod
+	}
+
+	return nil
 }
 
 // Conf returns the underlying configuration of the given service.

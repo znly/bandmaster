@@ -31,9 +31,10 @@ import (
 // It comes with sane defaults for a local development set-up.
 type Env struct {
 	/* Common */
-	Version Version  `envconfig:"VERSION" default:"V0_10_1_0"`
-	Addrs   []string `envconfig:"ADDRS" default:"localhost:9092"`
-	Bufsize int      `envconfig:"BUFSIZE" default:"4096"`
+	Addrs     []string `envconfig:"ADDRS" default:"localhost:9092"`
+	Version   Version  `envconfig:"VERSION" default:"V0_10_1_0"`
+	NbClients uint     `envconfig:"NB_CLIENTS" default:"1"`
+	Bufsize   int      `envconfig:"BUFSIZE" default:"4096"`
 
 	/* Producer */
 	ProdNotifSuccess bool        `envconfig:"PROD_NOTIF_SUCCESS" default:"false"`
@@ -127,10 +128,9 @@ func (e *Env) Config() *Config {
 	clusterConf.Version = sarama.KafkaVersion(e.Version)
 
 	conf := &Config{
-		ClusterConf:     clusterConf,
-		Addrs:           e.Addrs,
-		ConsumerTopics:  e.ConsTopics,
-		ConsumerGroupID: e.ConsGroupID,
+		ClusterConf: clusterConf,
+		Addrs:       e.Addrs,
+		NbClients:   e.NbClients,
 	}
 
 	return conf

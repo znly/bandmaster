@@ -28,42 +28,17 @@ func TestService_Kafka(t *testing.T) {
 	env, _ := NewEnv("BM_KAFKA")
 	assert.NotNil(t, env)
 	conf := env.Config()
+	conf.NbClients = 16
 	assert.NotNil(t, conf)
-	conf.ConsumerTopics = []string{"test"}
-	conf.ConsumerGroupID = "cg"
 
 	s := New(conf)
 
 	services.TestService_Generic(t, s,
 		func(t *testing.T, s bandmaster.Service) {
-			c := Consumer(s)
+			c := Consumer(s, "cg", "test")
 			assert.NotNil(t, c)
 			assert.NotNil(t, c.Messages())
-			p := Producer(s)
-			assert.NotNil(t, p)
-			assert.NotNil(t, p.Input())
-			cc := Conf(s)
-			assert.NotNil(t, cc)
-			assert.Equal(t, conf, cc)
-		},
-	)
-}
-
-func TestService_Kafka_ProducerOnly(t *testing.T) {
-	env, _ := NewEnv("BM_KAFKA")
-	assert.NotNil(t, env)
-	conf := env.Config()
-	assert.NotNil(t, conf)
-	conf.ConsumerTopics = nil
-	conf.ConsumerGroupID = ""
-
-	s := New(conf)
-
-	services.TestService_Generic(t, s,
-		func(t *testing.T, s bandmaster.Service) {
-			c := Consumer(s)
-			assert.Nil(t, c)
-			p := Producer(s)
+			p := AsyncProducer(s)
 			assert.NotNil(t, p)
 			assert.NotNil(t, p.Input())
 			cc := Conf(s)
