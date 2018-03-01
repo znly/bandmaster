@@ -26,9 +26,9 @@ import (
 // Env can be used to configure a SQL session via the environment.
 //
 // It comes with sane defaults for a local development set-up.
-// The default driver is setup to Postgres with a working local Addr
+// The default driver is setup to `posgres` with a working local address.
 type Env struct {
-	DriverName      string        `envconfig:"DRIVER_NAME" default:"postgres"`
+	Driver          string        `envconfig:"DRIVER" default:"postgres"`
 	Addr            string        `envconfig:"ADDR" default:"postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"`
 	ConnMaxLifetime time.Duration `envconfig:"CONN_MAX_LIFETIME" default:"10m"`
 	MaxIdleConns    int           `envconfig:"MAX_IDLE_CONNS" default:"1"`
@@ -50,7 +50,7 @@ func NewEnv(prefix string) (*Env, error) {
 // Config returns a `Config` using the values from the environment.
 func (e *Env) Config() *Config {
 	var config Config
-	config.DriverName = e.DriverName
+	config.Driver = e.Driver
 	config.Addr = e.Addr
 	config.ConnMaxLifetime = e.ConnMaxLifetime
 	config.MaxIdleConns = e.MaxIdleConns

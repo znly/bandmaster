@@ -26,7 +26,7 @@ import (
 
 // -----------------------------------------------------------------------------
 
-// Tests are run with the Default env config: PostgreSQL using lib/pq
+// Tests are run with the Default env config: PostgreSQL using lib/pq.
 func TestService_SQL(t *testing.T) {
 	env, _ := NewEnv("BM_SQL")
 	assert.NotNil(t, env)
