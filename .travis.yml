@@ -5,6 +5,7 @@ services:
 - redis
 - cassandra
 - memcached
+- postgresql
 sudo: required
 
 language: go
@@ -18,7 +19,7 @@ before_install:
     - make -f Makefile.ci tools_external
 install:
     - make -f Makefile deps
-    - docker-compose -f docker-compose.yml up -d nats kafka es1 es2 es5 sql
+    - docker-compose -f docker-compose.yml up -d nats kafka es1 es2 es5
 script:
     - make -f Makefile.ci tests
     - make -f Makefile.ci coverage
