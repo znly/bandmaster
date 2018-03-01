@@ -16,7 +16,7 @@ type Service struct {
 }
 
 type Config struct {
-	DriverName      string
+	Driver          string
 	Addr            string
 	ConnMaxLifetime time.Duration
 	MaxIdleConns    int
@@ -39,16 +39,15 @@ func New(conf *Config) bandmaster.Service {
 
 // -----------------------------------------------------------------------------
 
-// Start opens PING the server and establish a connection if necessary:
-// the service is marked as 'started' in case of success;
-// otherwise, an error is returned.
+// Start opens a connection and PINGs the server: if everything goes smoothly,
+// the service is marked as 'started'; otherwise, an error is returned.
 //
 //
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
 func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 	var err error
-	s.db, err = sql.Open(s.config.DriverName, s.config.Addr)
+	s.db, err = sql.Open(s.config.Driver, s.config.Addr)
 	if err != nil {
 		return err
 	}
@@ -67,9 +66,7 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 //
 // Stop is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
-func (s *Service) Stop(context.Context) error {
-	return s.db.Close()
-}
+func (s *Service) Stop(context.Context) error { return s.db.Close() }
 
 // -----------------------------------------------------------------------------
 
@@ -78,7 +75,7 @@ func (s *Service) Stop(context.Context) error {
 // It assumes that the service is ready; i.e. it might return nil if it's
 // actually not.
 //
-// NOTE: This will panic if `s` is not a `sql.DB`.
+// NOTE: This will panic if `s` is not a `sql.Service`.
 func Client(s bandmaster.Service) *sql.DB {
 	return s.(*Service).db
 }
