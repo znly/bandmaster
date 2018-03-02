@@ -45,7 +45,7 @@ func New(conf *Config) bandmaster.Service {
 //
 // Start is used by BandMaster's internal machinery, it shouldn't ever be called
 // directly by the end-user of the service.
-func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
+func (s *Service) Start(ctx context.Context, _ map[string]bandmaster.Service) error {
 	var err error
 	s.db, err = sql.Open(s.config.Driver, s.config.Addr)
 	if err != nil {
@@ -55,7 +55,7 @@ func (s *Service) Start(context.Context, map[string]bandmaster.Service) error {
 	s.db.SetMaxIdleConns(s.config.MaxIdleConns)
 	s.db.SetMaxOpenConns(s.config.MaxOpenConns)
 
-	if err := s.db.Ping(); err != nil {
+	if err := s.db.PingContext(ctx); err != nil {
 		return err
 	}
 	return nil
